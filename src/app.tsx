@@ -233,6 +233,9 @@ export function App() {
 function Home() {
   const [items, setItems] = useState<Product[] | null>(null)
   const [categories, setCategories] = useState<Category[]>([])
+  const [featuredBrands, setFeaturedBrands] = useState<Brand[] | null>(null)
+  const [brandsError, setBrandsError] = useState('')
+  const [brandsBusy, setBrandsBusy] = useState(true)
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(true)
   async function load() {
@@ -251,15 +254,27 @@ function Home() {
       setBusy(false)
     }
   }
+  async function loadBrands() {
+    setBrandsBusy(true)
+    setBrandsError('')
+    try {
+      setFeaturedBrands((await discoverBrands()).content.slice(0, 3))
+    } catch (e) {
+      setBrandsError(e instanceof Error ? e.message : 'Could not load makers.')
+    } finally {
+      setBrandsBusy(false)
+    }
+  }
   useEffect(() => {
     void load()
+    void loadBrands()
   }, [])
   return (
     <>
       <section className="hero">
         <div className="wrap hero-grid">
           <div>
-            <label className="eyebrow">A little more local</label>
+            <div className="eyebrow">A little more local</div>
             <h1>
               Good finds.
               <br />
@@ -299,7 +314,7 @@ function Home() {
       <section className="wrap section">
         <div className="section-head">
           <div>
-            <label className="eyebrow">A good place to start</label>
+            <div className="eyebrow">A good place to start</div>
             <h2>Browse by feeling</h2>
           </div>
           <Link className="text-link" to="/products">
@@ -320,11 +335,42 @@ function Home() {
           )}
         </div>
       </section>
+      <section className="wrap section">
+        <div className="section-head">
+          <div>
+            <div className="eyebrow">Good people, good things</div>
+            <h2>Makers to know</h2>
+          </div>
+          <Link className="text-link" to="/brands">
+            Meet every maker ↗
+          </Link>
+        </div>
+        {brandsBusy ? (
+          <Loading />
+        ) : brandsError ? (
+          <Failure message={brandsError} retry={() => void loadBrands()} />
+        ) : featuredBrands?.length ? (
+          <div className="brand-grid">
+            {featuredBrands.map((brand, i) => (
+              <article className={`brand-card bc-${i}`} key={brand.id}>
+                <span className="monogram">{brand.name.slice(0, 1)}</span>
+                <div className="eyebrow">Independent label</div>
+                <h3>{brand.name}</h3>
+                <p>{brand.description || 'A local label, thoughtfully made.'}</p>
+              </article>
+            ))}
+          </div>
+        ) : (
+          <Empty title="Our maker list is taking shape">
+            <p>Our first independent partners will be here soon.</p>
+          </Empty>
+        )}
+      </section>
       <section className="section featured">
         <div className="wrap">
           <div className="section-head">
             <div>
-              <label className="eyebrow">Picked for you</label>
+              <div className="eyebrow">Picked for you</div>
               <h2>Little things, loved lots</h2>
             </div>
             <Link className="text-link" to="/products">
@@ -354,7 +400,7 @@ function Home() {
             B<br />♥<br />P
           </div>
           <div>
-            <label className="eyebrow">The Brandista feeling</label>
+            <div className="eyebrow">The Brandista feeling</div>
             <h2>
               Find a brand.
               <br />
@@ -409,7 +455,7 @@ function Products() {
     const next = new URLSearchParams(query)
     if (value) next.set(key, value)
     else next.delete(key)
-    next.delete('page')
+    if (key !== 'page') next.delete('page')
     setQuery(next)
   }
   return (
@@ -417,7 +463,7 @@ function Products() {
       <Crumb current="Shop all" />
       <div className="catalog-head">
         <div>
-          <label className="eyebrow">Curated, not crowded</label>
+          <div className="eyebrow">Curated, not crowded</div>
           <h1>Find your next favourite</h1>
           <p>Good things from independent Pakistani brands.</p>
         </div>
@@ -498,23 +544,35 @@ function ProductDetail() {
   const [item, setItem] = useState<Product | null>(null)
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(true)
+  const [retryCount, setRetryCount] = useState(0)
   const [notice, setNotice] = useState('')
   const { account } = useAuth()
   useEffect(() => {
+    let active = true
     setLoading(true)
+    setError('')
+    setItem(null)
     getProduct(slug)
-      .then(setItem)
-      .catch((e: unknown) =>
+      .then((product) => {
+        if (active) setItem(product)
+      })
+      .catch((e: unknown) => {
+        if (!active) return
         setError(
           e instanceof ApiError && e.status === 404
             ? 'This find is no longer available.'
             : e instanceof Error
               ? e.message
               : 'Could not load this product.',
-        ),
-      )
-      .finally(() => setLoading(false))
-  }, [slug])
+        )
+      })
+      .finally(() => {
+        if (active) setLoading(false)
+      })
+    return () => {
+      active = false
+    }
+  }, [slug, retryCount])
   async function add() {
     if (!item) return
     if (!account) {
@@ -537,7 +595,10 @@ function ProductDetail() {
   if (error || !item)
     return (
       <div className="wrap page-space">
-        <Failure message={error || 'Product not found.'} />
+        <Failure
+          message={error || 'Product not found.'}
+          retry={() => setRetryCount((n) => n + 1)}
+        />
       </div>
     )
   return (
@@ -550,7 +611,7 @@ function ProductDetail() {
           <small>{item.categoryName}</small>
         </div>
         <div>
-          <label className="eyebrow">{item.brandName}</label>
+          <div className="eyebrow">{item.brandName}</div>
           <h1>{item.name}</h1>
           <strong className="price">{price(item.price)}</strong>
           <p>
@@ -597,7 +658,7 @@ function Brands() {
   }, [])
   return (
     <section className="wrap page-space">
-      <label className="eyebrow">Good people, good things</label>
+      <div className="eyebrow">Good people, good things</div>
       <h1 className="page-title">Meet the makers</h1>
       <p className="intro">Independent Pakistani brands with something worth sharing.</p>
       {error ? (
@@ -609,7 +670,7 @@ function Brands() {
           {brands.map((b, i) => (
             <article className={`brand-card bc-${i % 4}`} key={b.id}>
               <span className="monogram">{b.name.slice(0, 1)}</span>
-              <label className="eyebrow">Independent label</label>
+              <div className="eyebrow">Independent label</div>
               <h2>{b.name}</h2>
               <p>{b.description || 'A local label, thoughtfully made.'}</p>
               <Link className="text-link" to={`/brands/${encodeURIComponent(b.slug)}`}>
@@ -659,7 +720,7 @@ function Auth({ mode }: { mode: 'sign-in' | 'register' }) {
   return (
     <section className="auth-page">
       <div className="auth-card">
-        <label className="eyebrow">{isNew ? 'A good thing starts here' : 'Welcome back'}</label>
+        <div className="eyebrow">{isNew ? 'A good thing starts here' : 'Welcome back'}</div>
         <h1>{isNew ? 'Make yourself at home.' : 'Good to see you.'}</h1>
         <p>
           {isNew
@@ -746,7 +807,7 @@ function CartPage() {
   }
   return (
     <section className="wrap page-space">
-      <label className="eyebrow">Saved for later? It’s right here</label>
+      <div className="eyebrow">Saved for later? It’s right here</div>
       <h1 className="page-title">Your bag</h1>
       {!account ? (
         <div className="prompt">
@@ -848,7 +909,7 @@ function Account({ addresses = false }: { addresses?: boolean }) {
     )
   return (
     <section className="wrap page-space">
-      <label className="eyebrow">Your Brandista</label>
+      <div className="eyebrow">Your Brandista</div>
       <h1 className="page-title">Hello, {account.email.split('@')[0]}.</h1>
       <p className="intro">
         Your account is ready. More profile settings are coming in a later milestone.
@@ -888,7 +949,7 @@ function Account({ addresses = false }: { addresses?: boolean }) {
 function Info({ title, label = 'A note from Brandista' }: { title: string; label?: string }) {
   return (
     <section className="wrap page-space info">
-      <label className="eyebrow">{label}</label>
+      <div className="eyebrow">{label}</div>
       <h1 className="page-title">{title}</h1>
       <p className="intro">
         This page is part of the Brandista foundation and will be expanded in a later milestone.
