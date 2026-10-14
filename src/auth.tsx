@@ -1,12 +1,8 @@
-import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from 'react'
+import { useEffect, useMemo, useState, type ReactNode } from 'react'
 import { setAccessToken } from './api/client'
+import { AuthContext, type AuthValue } from './auth-context'
 import type { Account } from './types'
-type AuthValue = {
-  account: Account | null
-  signIn: (token: string, account: Account) => void
-  signOut: () => void
-}
-const AuthContext = createContext<AuthValue | null>(null)
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [account, setAccount] = useState<Account | null>(null)
   useEffect(() => {
@@ -32,9 +28,4 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     [account],
   )
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
-}
-export function useAuth() {
-  const value = useContext(AuthContext)
-  if (!value) throw new Error('useAuth must be used inside AuthProvider')
-  return value
 }

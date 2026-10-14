@@ -1,20 +1,20 @@
 # Brandista Mobile
 
-Customer-facing web foundation for Brandista, a multi-brand shopping destination for independent Pakistani labels. The designated `brandista-mobile` repository was empty at F0.1 start; no SRS or prior frontend implementation was available. This app uses the real B0.14 backend contract where routes exist and labels unimplemented surfaces clearly.
+Customer-facing storefront for Brandista, a multi-brand shopping destination for independent Pakistani labels. No SRS file is available in the local repositories. The app follows the documented B0.14 backend contract where routes exist and labels unimplemented surfaces clearly.
 
 ## Stack
 
-React, TypeScript, Vite, React Router, ESLint, Prettier and Vitest. React and TypeScript provide a compact component model with checked API data shapes; Vite keeps local setup and production builds simple. Node.js 20.19+ or 22.12+ is recommended.
+React, TypeScript, Vite, React Router, ESLint, Prettier and Vitest. Direct dependency versions are pinned and locked. Use Node.js `^22.22.2`, `^24.15.0`, or `>=26.0.0`; these ranges satisfy the current Vite, Vitest and jsdom engine requirements.
 
 ## Run locally
 
-```sh
-npm install
-Copy-Item .env.example .env.local # PowerShell; optional with the local backend default
-npm run dev
+```powershell
+npm ci
+Copy-Item .env.example .env.local # optional; the default API URL is localhost:8080
+npm run dev -- --host 127.0.0.1
 ```
 
-Open the URL printed by Vite (normally `http://localhost:5173`). Set `VITE_API_BASE_URL` to the API root including version, e.g. `http://localhost:8080/api/v1`. The backend CORS allow-list must include the exact frontend origin, e.g. `http://localhost:5173`. Never put credentials or tokens in frontend build-time variables.
+Start MySQL and the backend from the sibling `brandista-mvp` repository first. Open the exact URL printed by Vite. Set `VITE_API_BASE_URL` to the versioned API root, for example `http://localhost:8080/api/v1`. Set backend `CORS_ALLOWED_ORIGINS` to the exact frontend origin (scheme, host and port); `localhost` and `127.0.0.1` are different origins. Never put credentials or tokens in frontend build-time variables. See [the brand demo runbook](./docs/release/BRAND-DEMO-RUNBOOK.md) for the full local sequence.
 
 ## Quality checks
 
@@ -42,9 +42,13 @@ Checkout is intentionally unavailable because no backend checkout contract exist
 
 `src/api/client.ts` centralizes JSON requests, base URL, bearer header, no-content responses and normalized errors. Endpoint wrappers and DTOs are in `src/api/brandista.ts` and `src/types.ts`. Access tokens are held in application memory only; reload/close clears the token and requires signing in again. Passwords are submitted to the configured API and are not stored. Do not add localStorage token persistence without an explicit security decision. Configure backend `CORS_ALLOWED_ORIGINS` to include the frontend origin.
 
+## Release status
+
+The application uses real API calls for catalogue, identity, addresses and cart paths present in the backend contract. It has no live-data fallback; connection errors remain visible when the API is unavailable. Product artwork is CSS illustration. Checkout, orders and payments are not implemented. See the [F0.6 integration report](./docs/integration/F0.6-end-to-end-report.md) and [F0.7 readiness report](./docs/release/F0.7-release-readiness-report.md) for verified status.
+
 ## F0.1 notes
 
-The visual system uses warm paper, botanical green and clay accents, editorial serif headings, responsive layouts and visible keyboard focus. Google Fonts are progressive enhancement with system fallbacks. No SRS was present, so routes reflect implemented backend capabilities rather than claiming SRS conformance. Live integration depends on the MySQL credential issue recorded in B0.14.
+The visual system uses warm paper, botanical green and clay accents, editorial serif headings, responsive layouts and visible keyboard focus. Google Fonts are progressive enhancement with system fallbacks. Routes reflect implemented backend capabilities; SRS conformance cannot be claimed until the SRS is available.
 
 ## Implementation report
 
