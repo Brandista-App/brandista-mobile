@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { apiRequest, setAccessToken } from './client'
+import { apiRequest, hasAccessToken, setAccessToken } from './client'
 describe('apiRequest', () => {
   afterEach(() => {
     vi.unstubAllGlobals()
@@ -31,6 +31,15 @@ describe('apiRequest', () => {
       message: 'Invalid',
       fieldErrors: [{ field: 'email', message: 'Required' }],
     })
+  })
+  it('clears the in-memory token after an unauthorized protected response', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue(new Response('{"message":"Unauthorized"}', { status: 401 })),
+    )
+    setAccessToken('expired-test-token')
+    await expect(apiRequest('/customers/me/cart')).rejects.toMatchObject({ status: 401 })
+    expect(hasAccessToken()).toBe(false)
   })
   it('returns a safe message for network failures', async () => {
     vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('secret network detail')))

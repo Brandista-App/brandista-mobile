@@ -1,4 +1,4 @@
-import { createContext, useContext, useMemo, useState, type ReactNode } from 'react'
+import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from 'react'
 import { setAccessToken } from './api/client'
 import type { Account } from './types'
 type AuthValue = {
@@ -9,6 +9,14 @@ type AuthValue = {
 const AuthContext = createContext<AuthValue | null>(null)
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [account, setAccount] = useState<Account | null>(null)
+  useEffect(() => {
+    const expireSession = () => {
+      setAccessToken(null)
+      setAccount(null)
+    }
+    window.addEventListener('brandista:session-expired', expireSession)
+    return () => window.removeEventListener('brandista:session-expired', expireSession)
+  }, [])
   const value = useMemo<AuthValue>(
     () => ({
       account,
