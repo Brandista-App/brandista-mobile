@@ -49,3 +49,5 @@ The visual system uses warm paper, botanical green and clay accents, editorial s
 ## Implementation report
 
 See [F0.1-implementation-report.md](./F0.1-implementation-report.md) for verified scope, commands, test results and remaining blockers.
+
+See [QA-01 frontend verification](./docs/qa/QA-01-frontend-verification.md) for route, browser, accessibility and runtime checks.
