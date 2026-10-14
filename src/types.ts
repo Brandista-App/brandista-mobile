@@ -12,6 +12,18 @@ export type Brand = {
   description?: string | null
   logoReference?: string | null
 }
+export type BrandApplicationSubmission = {
+  brandName: string
+  contactName: string
+  contactEmail: string
+  website?: string
+  message?: string
+}
+export type BrandApplicationReceipt = {
+  id: number
+  status: 'SUBMITTED'
+  createdAt: string
+}
 export type Category = { id: number; name: string; slug: string; description?: string | null }
 export type Product = {
   id: number

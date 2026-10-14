@@ -620,3 +620,49 @@ it('shows an unavailable product response instead of reporting add-to-cart succe
   )
   expect(screen.queryByText('Added to your bag.')).not.toBeInTheDocument()
 })
+
+it('submits a founding brand application and reports that it awaits review', async () => {
+  window.history.replaceState({}, '', '/partners')
+  const fetchMock = vi.fn(async (_input: RequestInfo | URL, init?: RequestInit) => {
+    expect(init?.method).toBe('POST')
+    expect(JSON.parse(String(init?.body))).toEqual({
+      brandName: 'Example Atelier',
+      contactName: 'Amina Example',
+      contactEmail: 'amina@example.test',
+      website: 'https://example.test',
+      message: 'Independent label based in Lahore.',
+    })
+    return jsonResponse({ id: 41, status: 'SUBMITTED', createdAt: '2026-10-14T10:00:00' }, 201)
+  })
+  vi.stubGlobal('fetch', fetchMock)
+  render(<App />)
+
+  fireEvent.change(screen.getByLabelText(/Brand name/), { target: { value: 'Example Atelier' } })
+  fireEvent.change(screen.getByLabelText(/Your name/), { target: { value: 'Amina Example' } })
+  fireEvent.change(screen.getByLabelText(/Work email/), { target: { value: 'amina@example.test' } })
+  fireEvent.change(screen.getByLabelText(/Website/), { target: { value: 'https://example.test' } })
+  fireEvent.change(screen.getByLabelText(/A short introduction/), {
+    target: { value: 'Independent label based in Lahore.' },
+  })
+  fireEvent.submit(screen.getByLabelText(/Brand name/).closest('form')!)
+
+  expect(await screen.findByRole('status')).toHaveTextContent('received for review')
+  expect(screen.getByText(/does not approve or activate a brand/)).toBeInTheDocument()
+  expect(fetchMock).toHaveBeenCalledTimes(1)
+})
+
+it('shows duplicate-submission errors without claiming the application was received', async () => {
+  window.history.replaceState({}, '', '/partners')
+  vi.stubGlobal(
+    'fetch',
+    vi.fn(async () => jsonResponse({ message: 'An open application already exists for this contact email.' }, 409)),
+  )
+  render(<App />)
+  fireEvent.change(screen.getByLabelText(/Brand name/), { target: { value: 'Example Atelier' } })
+  fireEvent.change(screen.getByLabelText(/Your name/), { target: { value: 'Amina Example' } })
+  fireEvent.change(screen.getByLabelText(/Work email/), { target: { value: 'amina@example.test' } })
+  fireEvent.submit(screen.getByLabelText(/Brand name/).closest('form')!)
+
+  expect(await screen.findByRole('alert')).toHaveTextContent('An open application already exists')
+  expect(screen.queryByRole('status')).not.toBeInTheDocument()
+})
