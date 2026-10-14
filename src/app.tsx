@@ -23,6 +23,7 @@ import {
   login,
   register,
   removeCartItem,
+  submitBrandApplication,
   updateCartItem,
 } from './api/brandista'
 import { ApiError } from './api/client'
@@ -187,6 +188,7 @@ function Footer() {
           <Link to="/products">Shop all</Link>
           <Link to="/brands">Our brands</Link>
           <Link to="/about">Our story</Link>
+          <Link to="/partners">Partner with us</Link>
         </div>
         <div>
           <b>Your Brandista</b>
@@ -212,6 +214,7 @@ function Shell() {
           <Route path="/products" element={<Products />} />
           <Route path="/products/:slug" element={<ProductDetail />} />
           <Route path="/brands" element={<Brands />} />
+          <Route path="/partners" element={<PartnerApplication />} />
           <Route path="/brands/:slug" element={<Info title="This brand page is coming soon." />} />
           <Route path="/sign-in" element={<Auth mode="sign-in" />} />
           <Route path="/register" element={<Auth mode="register" />} />
@@ -1307,6 +1310,82 @@ function Info({ title, label = 'A note from Brandista' }: { title: string; label
       <Link className="button outline" to="/">
         Back to home
       </Link>
+    </section>
+  )
+}
+
+function PartnerApplication() {
+  const [busy, setBusy] = useState(false)
+  const [submitted, setSubmitted] = useState(false)
+  const [error, setError] = useState('')
+
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    const form = event.currentTarget
+    const data = new FormData(form)
+    setBusy(true)
+    setError('')
+    try {
+      await submitBrandApplication({
+        brandName: String(data.get('brandName') || '').trim(),
+        contactName: String(data.get('contactName') || '').trim(),
+        contactEmail: String(data.get('contactEmail') || '').trim(),
+        website: String(data.get('website') || '').trim() || undefined,
+        message: String(data.get('message') || '').trim() || undefined,
+      })
+      setSubmitted(true)
+      form.reset()
+    } catch (cause) {
+      const fieldErrors = cause instanceof ApiError ? cause.fieldErrors : []
+      const details = fieldErrors.map((item) => item.field + ': ' + item.message).join('. ')
+      setError(
+        details
+          ? cause.message + ' ' + details
+          : cause instanceof Error
+            ? cause.message
+            : 'We could not submit your application. Please try again.',
+      )
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  return (
+    <section className="wrap page-space partner-page">
+      <div className="eyebrow">For independent brands</div>
+      <h1 className="page-title">Let’s make room for your brand.</h1>
+      <p className="intro partner-intro">
+        Tell us a little about your business. Our team will review your interest and contact you
+        about possible fit for a founding brand pilot. Sending this form does not approve or activate a brand.
+      </p>
+      {submitted ? (
+        <div className="partner-success" role="status" aria-live="polite">
+          <h2>Thank you for getting in touch.</h2>
+          <p>Your application has been received for review. A Brandista operator will follow up using the contact details you provided.</p>
+          <button className="button outline" onClick={() => setSubmitted(false)}>Send another application</button>
+        </div>
+      ) : (
+        <form className="form partner-form" onSubmit={(event) => void handleSubmit(event)} aria-describedby="partner-disclaimer">
+          <label htmlFor="partner-brand-name">Brand name <span aria-hidden="true">*</span>
+            <input id="partner-brand-name" name="brandName" autoComplete="organization" maxLength={150} required />
+          </label>
+          <label htmlFor="partner-contact-name">Your name <span aria-hidden="true">*</span>
+            <input id="partner-contact-name" name="contactName" autoComplete="name" maxLength={150} required />
+          </label>
+          <label htmlFor="partner-contact-email">Work email <span aria-hidden="true">*</span>
+            <input id="partner-contact-email" name="contactEmail" type="email" autoComplete="email" maxLength={254} required />
+          </label>
+          <label htmlFor="partner-website">Website <span>(optional)</span>
+            <input id="partner-website" name="website" type="url" maxLength={2048} placeholder="https://example.com" />
+          </label>
+          <label htmlFor="partner-message">A short introduction <span>(optional)</span>
+            <textarea id="partner-message" name="message" rows={4} maxLength={2000} />
+          </label>
+          <p id="partner-disclaimer" className="partner-disclaimer">Please do not include identity documents, payment details, or other sensitive information.</p>
+          {error && <p className="inline-error" role="alert">{error}</p>}
+          <button className="button" type="submit" disabled={busy}>{busy ? 'Sending…' : 'Send for review'}</button>
+        </form>
+      )}
     </section>
   )
 }

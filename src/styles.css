@@ -1258,3 +1258,45 @@ footer {
     transition-duration: 0.01ms !important;
   }
 }
+
+.partner-form {
+  width: min(560px, 100%);
+  margin-top: 30px;
+}
+.partner-form textarea {
+  width: 100%;
+  min-height: 110px;
+  resize: vertical;
+  border: 1px solid #d9d5ca;
+  padding: 11px 12px;
+  background: var(--cream);
+  color: var(--ink);
+  font: inherit;
+}
+.partner-intro {
+  max-width: 620px;
+  line-height: 1.8;
+}
+.partner-disclaimer {
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.6;
+}
+.partner-success {
+  max-width: 560px;
+  margin-top: 32px;
+  padding: 26px;
+  background: #f0eee8;
+}
+.partner-success h2 {
+  font: 500 25px var(--serif);
+}
+.partner-success p {
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.7;
+}
+.partner-form button:disabled {
+  opacity: .65;
+  cursor: wait;
+}

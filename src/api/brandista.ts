@@ -1,5 +1,5 @@
 import { apiRequest, jsonBody } from './client'
-import type { Address, Brand, Cart, Category, LoginResponse, Page, Product } from '../types'
+import type { Address, Brand, BrandApplicationReceipt, BrandApplicationSubmission, Cart, Category, LoginResponse, Page, Product } from '../types'
 export const discoverProducts = (params = new URLSearchParams()) =>
   apiRequest<Page<Product>>(`/products${params.size ? `?${params}` : ''}`)
 export const getProduct = (slug: string) =>
@@ -8,6 +8,11 @@ export const discoverBrands = (params = new URLSearchParams()) =>
   apiRequest<Page<Brand>>(`/brands${params.size ? `?${params}` : ''}`)
 export const discoverCategories = (params = new URLSearchParams()) =>
   apiRequest<Page<Category>>(`/categories${params.size ? `?${params}` : ''}`)
+export const submitBrandApplication = (application: BrandApplicationSubmission) =>
+  apiRequest<BrandApplicationReceipt>('/brand-applications', {
+    method: 'POST',
+    body: jsonBody(application),
+  })
 export const register = (email: string, password: string) =>
   apiRequest<{ id: number; email: string; createdAt: string }>('/registrations', {
     method: 'POST',
