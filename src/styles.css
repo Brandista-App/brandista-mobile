@@ -701,7 +701,8 @@ footer {
   font: 22px var(--serif);
   margin-bottom: 17px;
 }
-.brand-card h2 {
+.brand-card h2,
+.brand-card h3 {
   font: 500 26px var(--serif);
   margin: 8px 0;
 }

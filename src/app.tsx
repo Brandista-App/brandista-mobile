@@ -233,6 +233,9 @@ export function App() {
 function Home() {
   const [items, setItems] = useState<Product[] | null>(null)
   const [categories, setCategories] = useState<Category[]>([])
+  const [featuredBrands, setFeaturedBrands] = useState<Brand[] | null>(null)
+  const [brandsError, setBrandsError] = useState('')
+  const [brandsBusy, setBrandsBusy] = useState(true)
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(true)
   async function load() {
@@ -251,8 +254,20 @@ function Home() {
       setBusy(false)
     }
   }
+  async function loadBrands() {
+    setBrandsBusy(true)
+    setBrandsError('')
+    try {
+      setFeaturedBrands((await discoverBrands()).content.slice(0, 3))
+    } catch (e) {
+      setBrandsError(e instanceof Error ? e.message : 'Could not load makers.')
+    } finally {
+      setBrandsBusy(false)
+    }
+  }
   useEffect(() => {
     void load()
+    void loadBrands()
   }, [])
   return (
     <>
@@ -319,6 +334,37 @@ function Home() {
             </Link>
           )}
         </div>
+      </section>
+      <section className="wrap section">
+        <div className="section-head">
+          <div>
+            <div className="eyebrow">Good people, good things</div>
+            <h2>Makers to know</h2>
+          </div>
+          <Link className="text-link" to="/brands">
+            Meet every maker ↗
+          </Link>
+        </div>
+        {brandsBusy ? (
+          <Loading />
+        ) : brandsError ? (
+          <Failure message={brandsError} retry={() => void loadBrands()} />
+        ) : featuredBrands?.length ? (
+          <div className="brand-grid">
+            {featuredBrands.map((brand, i) => (
+              <article className={`brand-card bc-${i}`} key={brand.id}>
+                <span className="monogram">{brand.name.slice(0, 1)}</span>
+                <div className="eyebrow">Independent label</div>
+                <h3>{brand.name}</h3>
+                <p>{brand.description || 'A local label, thoughtfully made.'}</p>
+              </article>
+            ))}
+          </div>
+        ) : (
+          <Empty title="Our maker list is taking shape">
+            <p>Our first independent partners will be here soon.</p>
+          </Empty>
+        )}
       </section>
       <section className="section featured">
         <div className="wrap">
@@ -409,7 +455,7 @@ function Products() {
     const next = new URLSearchParams(query)
     if (value) next.set(key, value)
     else next.delete(key)
-    next.delete('page')
+    if (key !== 'page') next.delete('page')
     setQuery(next)
   }
   return (
@@ -498,23 +544,35 @@ function ProductDetail() {
   const [item, setItem] = useState<Product | null>(null)
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(true)
+  const [retryCount, setRetryCount] = useState(0)
   const [notice, setNotice] = useState('')
   const { account } = useAuth()
   useEffect(() => {
+    let active = true
     setLoading(true)
+    setError('')
+    setItem(null)
     getProduct(slug)
-      .then(setItem)
-      .catch((e: unknown) =>
+      .then((product) => {
+        if (active) setItem(product)
+      })
+      .catch((e: unknown) => {
+        if (!active) return
         setError(
           e instanceof ApiError && e.status === 404
             ? 'This find is no longer available.'
             : e instanceof Error
               ? e.message
               : 'Could not load this product.',
-        ),
-      )
-      .finally(() => setLoading(false))
-  }, [slug])
+        )
+      })
+      .finally(() => {
+        if (active) setLoading(false)
+      })
+    return () => {
+      active = false
+    }
+  }, [slug, retryCount])
   async function add() {
     if (!item) return
     if (!account) {
@@ -537,7 +595,10 @@ function ProductDetail() {
   if (error || !item)
     return (
       <div className="wrap page-space">
-        <Failure message={error || 'Product not found.'} />
+        <Failure
+          message={error || 'Product not found.'}
+          retry={() => setRetryCount((n) => n + 1)}
+        />
       </div>
     )
   return (
