@@ -45,3 +45,7 @@ Checkout is intentionally unavailable because no backend checkout contract exist
 ## F0.1 notes
 
 The visual system uses warm paper, botanical green and clay accents, editorial serif headings, responsive layouts and visible keyboard focus. Google Fonts are progressive enhancement with system fallbacks. No SRS was present, so routes reflect implemented backend capabilities rather than claiming SRS conformance. Live integration depends on the MySQL credential issue recorded in B0.14.
+
+## Implementation report
+
+See [F0.1-implementation-report.md](./F0.1-implementation-report.md) for verified scope, commands, test results and remaining blockers.
