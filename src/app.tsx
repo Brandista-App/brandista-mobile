@@ -26,7 +26,8 @@ import {
   updateCartItem,
 } from './api/brandista'
 import { ApiError } from './api/client'
-import { AuthProvider, useAuth } from './auth'
+import { AuthProvider } from './auth'
+import { useAuth } from './auth-context'
 import type { Address, Brand, Cart, Category, Page, Product } from './types'
 
 function price(value: number, currency = 'PKR') {
