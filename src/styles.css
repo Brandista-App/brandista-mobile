@@ -634,6 +634,14 @@ footer {
   padding-bottom: 8px;
   color: var(--muted);
 }
+.filter-error {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin: 16px 0;
+  color: var(--clay-dark);
+  font-size: 11px;
+}
 .filters {
   margin: 28px 0 25px;
   padding-block: 13px;
@@ -744,6 +752,21 @@ footer {
   font-size: 11px;
   color: var(--green);
   margin: 23px 0;
+}
+.quantity-control {
+  display: grid;
+  gap: 7px;
+  width: min(180px, 100%);
+  margin: 20px 0 14px;
+  color: var(--muted);
+  font-size: 10px;
+}
+.quantity-control input {
+  min-height: 40px;
+  border: 1px solid #d9d5ca;
+  padding: 0 12px;
+  background: var(--cream);
+  color: var(--ink);
 }
 .note {
   display: block;
@@ -1068,10 +1091,11 @@ footer {
   }
   .filters {
     justify-content: space-between;
+    flex-wrap: wrap;
     gap: 9px;
   }
   .filters label {
-    width: 50%;
+    width: calc(50% - 5px);
   }
   .filters select {
     min-width: 0;
