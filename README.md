@@ -46,6 +46,10 @@ Checkout is intentionally unavailable because no backend checkout contract exist
 
 The application uses real API calls for catalogue, identity, addresses and cart paths present in the backend contract. It has no live-data fallback; connection errors remain visible when the API is unavailable. Product artwork is CSS illustration. Checkout, orders and payments are not implemented. See the [F0.6 integration report](./docs/integration/F0.6-end-to-end-report.md) and [F0.7 readiness report](./docs/release/F0.7-release-readiness-report.md) for verified status.
 
+## F0.8 deployment preparation
+
+The repository includes a local staging-mode environment template and deployment assessment/runbooks in `docs/deployment`. The configuration is for a local production-build rehearsal only. No remote host, domain, HTTPS ingress, staging database, secret store or pilot cohort has been provisioned. Do not invite testers or use local URLs/credentials for remote deployment.
+
 ## F0.1 notes
 
 The visual system uses warm paper, botanical green and clay accents, editorial serif headings, responsive layouts and visible keyboard focus. Google Fonts are progressive enhancement with system fallbacks. Routes reflect implemented backend capabilities; SRS conformance cannot be claimed until the SRS is available.
