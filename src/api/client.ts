@@ -7,6 +7,10 @@ export function setAccessToken(token: string | null) {
   accessToken = token
 }
 
+export function hasAccessToken() {
+  return accessToken !== null
+}
+
 export class ApiError extends Error {
   constructor(
     public status: number,
@@ -32,6 +36,11 @@ export async function apiRequest<T>(path: string, options: RequestInit = {}): Pr
   const body: unknown = await response.json().catch(() => null)
   if (!response.ok) {
     const error = body && typeof body === 'object' ? (body as Record<string, unknown>) : {}
+    if (response.status === 401 && accessToken) {
+      accessToken = null
+      if (typeof window !== 'undefined')
+        window.dispatchEvent(new Event('brandista:session-expired'))
+    }
     throw new ApiError(
       response.status,
       typeof error['message'] === 'string'

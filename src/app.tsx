@@ -214,9 +214,30 @@ function Shell() {
           <Route path="/brands/:slug" element={<Info title="This brand page is coming soon." />} />
           <Route path="/sign-in" element={<Auth mode="sign-in" />} />
           <Route path="/register" element={<Auth mode="register" />} />
-          <Route path="/cart" element={<CartPage />} />
-          <Route path="/account" element={<Account />} />
-          <Route path="/account/addresses" element={<Account addresses />} />
+          <Route
+            path="/cart"
+            element={
+              <ProtectedRoute>
+                <CartPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/account"
+            element={
+              <ProtectedRoute>
+                <Account />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/account/addresses"
+            element={
+              <ProtectedRoute>
+                <Account addresses />
+              </ProtectedRoute>
+            }
+          />
           <Route path="/about" element={<Info title="Good things have good stories." />} />
           <Route path="/checkout" element={<Navigate to="/cart" replace />} />
           <Route
@@ -228,6 +249,16 @@ function Shell() {
       <Footer />
     </>
   )
+}
+function ProtectedRoute({ children }: { children: React.ReactNode }) {
+  const { account } = useAuth()
+  const location = useLocation()
+  if (!account) {
+    return (
+      <Navigate to="/sign-in" replace state={{ from: `${location.pathname}${location.search}` }} />
+    )
+  }
+  return children
 }
 export function App() {
   return (
@@ -774,6 +805,8 @@ function Brands() {
     </section>
   )
 }
+type AuthFieldErrors = { email?: string; password?: string }
+
 function Auth({ mode }: { mode: 'sign-in' | 'register' }) {
   const isNew = mode === 'register'
   const [email, setEmail] = useState('')
@@ -781,25 +814,84 @@ function Auth({ mode }: { mode: 'sign-in' | 'register' }) {
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
-  const { signIn } = useAuth()
+  const [fieldErrors, setFieldErrors] = useState<AuthFieldErrors>({})
+  const [showPassword, setShowPassword] = useState(false)
+  const { account, signIn } = useAuth()
   const nav = useNavigate()
   const location = useLocation()
+  const locationState = location.state as {
+    from?: unknown
+    registrationSuccess?: boolean
+    email?: unknown
+  } | null
+  const requestedDestination =
+    typeof locationState?.from === 'string' &&
+    locationState.from.startsWith('/') &&
+    !locationState.from.startsWith('//')
+      ? locationState.from
+      : '/account'
+  useEffect(() => {
+    if (locationState?.registrationSuccess && !isNew) {
+      setSuccess('Your account is ready. Sign in to continue.')
+      if (typeof locationState.email === 'string') setEmail(locationState.email)
+    }
+  }, [isNew, locationState?.email, locationState?.registrationSuccess])
+  if (account && !isNew) return <Navigate to={requestedDestination} replace />
+
   async function submit(e: FormEvent) {
     e.preventDefault()
+    if (busy) return
+    const normalizedEmail = email.trim()
+    const nextFieldErrors: AuthFieldErrors = {}
+    if (!normalizedEmail) nextFieldErrors.email = 'Enter your email address.'
+    else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedEmail))
+      nextFieldErrors.email = 'Enter a valid email address.'
+    if (!password) nextFieldErrors.password = 'Enter your password.'
+    else {
+      const characterCount = Array.from(password).length
+      const byteCount = new TextEncoder().encode(password).length
+      if (isNew && characterCount < 12) nextFieldErrors.password = 'Use at least 12 characters.'
+      else if (byteCount > 72) nextFieldErrors.password = 'Password must be at most 72 UTF-8 bytes.'
+    }
+    setFieldErrors(nextFieldErrors)
+    if (Object.keys(nextFieldErrors).length) return
+
     setBusy(true)
     setError('')
     setSuccess('')
     try {
       if (isNew) {
-        const r = await register(email.trim(), password)
-        setSuccess(`Welcome, ${r.email}. Your account is ready; please sign in.`)
+        const r = await register(normalizedEmail, password)
+        nav('/sign-in', {
+          replace: true,
+          state: { from: requestedDestination, registrationSuccess: true, email: r.email },
+        })
       } else {
-        const r = await login(email.trim(), password)
+        const r = await login(normalizedEmail, password)
+        if (r.account.role !== 'CUSTOMER') {
+          setError('This account cannot access the Brandista customer storefront.')
+          return
+        }
         signIn(r.accessToken, r.account)
-        nav((location.state as { from?: string } | null)?.from || '/account', { replace: true })
+        nav(requestedDestination, { replace: true })
       }
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Please try again.')
+      if (e instanceof ApiError) {
+        const mapped: AuthFieldErrors = {}
+        for (const item of e.fieldErrors) {
+          if (item.field === 'email' || item.field === 'password') mapped[item.field] = item.message
+        }
+        setFieldErrors(mapped)
+        if (e.status === 401 && !isNew) setError('Email or password is incorrect.')
+        else if (e.status === 409 && isNew)
+          setError('An account with this email address already exists.')
+        else if (e.status === 400 && Object.keys(mapped).length)
+          setError('Please check the highlighted fields.')
+        else if (e.status >= 500 || e.status === 0)
+          setError('Brandista is unavailable right now. Please try again shortly.')
+        else
+          setError('We could not complete that request. Please review your details and try again.')
+      } else setError('We could not complete that request. Please try again.')
     } finally {
       setBusy(false)
     }
@@ -815,29 +907,64 @@ function Auth({ mode }: { mode: 'sign-in' | 'register' }) {
             : 'Sign in to pick up where you left off.'}
         </p>
         <form className="form" onSubmit={submit}>
-          <label>
+          <label htmlFor="auth-email">
             Email address
             <input
+              id="auth-email"
               type="email"
               autoComplete="email"
               required
+              maxLength={254}
+              aria-invalid={Boolean(fieldErrors.email)}
+              aria-describedby={fieldErrors.email ? 'auth-email-error' : undefined}
               value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              onChange={(e) => {
+                setEmail(e.target.value)
+                setFieldErrors((current) => ({ ...current, email: '' }))
+              }}
             />
+            {fieldErrors.email && (
+              <small id="auth-email-error" className="field-error">
+                {fieldErrors.email}
+              </small>
+            )}
           </label>
-          <label>
-            Password
-            <input
-              type="password"
-              autoComplete={isNew ? 'new-password' : 'current-password'}
-              minLength={isNew ? 12 : undefined}
-              maxLength={72}
-              required
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-            />
-            {isNew && <small>At least 12 characters; up to 72 UTF-8 bytes.</small>}
-          </label>
+          <div className="password-field">
+            <label htmlFor="auth-password">Password</label>
+            <div className="password-input-wrap">
+              <input
+                id="auth-password"
+                type={showPassword ? 'text' : 'password'}
+                autoComplete={isNew ? 'new-password' : 'current-password'}
+                required
+                aria-invalid={Boolean(fieldErrors.password)}
+                aria-describedby={
+                  fieldErrors.password ? 'auth-password-error' : isNew ? 'password-hint' : undefined
+                }
+                value={password}
+                onChange={(e) => {
+                  setPassword(e.target.value)
+                  setFieldErrors((current) => ({ ...current, password: '' }))
+                }}
+              />
+              <button
+                className="password-toggle"
+                type="button"
+                aria-label={showPassword ? 'Hide password' : 'Show password'}
+                aria-pressed={showPassword}
+                onClick={() => setShowPassword((visible) => !visible)}
+              >
+                {showPassword ? 'Hide' : 'Show'}
+              </button>
+            </div>
+            {fieldErrors.password ? (
+              <small id="auth-password-error" className="field-error">
+                {fieldErrors.password}
+              </small>
+            ) : isNew ? (
+              <small id="password-hint">At least 12 characters; at most 72 UTF-8 bytes.</small>
+            ) : null}
+          </div>
           {error && (
             <div className="inline-error" role="alert">
               {error}
@@ -859,7 +986,7 @@ function Auth({ mode }: { mode: 'sign-in' | 'register' }) {
           </Link>
         </p>
         <small className="note">
-          Access tokens stay in memory and clear when you close or refresh this page.
+          Your access token stays in memory and clears when you sign out, refresh, or it expires.
         </small>
       </div>
     </section>

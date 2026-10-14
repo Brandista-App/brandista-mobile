@@ -1,9 +1,9 @@
 /* @vitest-environment jsdom */
 import '@testing-library/jest-dom/vitest'
-import { cleanup, fireEvent, render, screen, within } from '@testing-library/react'
+import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { afterEach, beforeEach, expect, it, vi } from 'vitest'
 import { App } from './app'
-import { setAccessToken } from './api/client'
+import { hasAccessToken, setAccessToken } from './api/client'
 
 beforeEach(() => {
   window.history.replaceState({}, '', '/')
@@ -276,4 +276,196 @@ it('submits the selected quantity to the authenticated cart endpoint', async () 
   expect(new Headers(cartRequest?.init?.headers).get('Authorization')).toBe(
     'Bearer test-access-token',
   )
+})
+
+const customerLogin = {
+  accessToken: 'test-access-token',
+  tokenType: 'Bearer',
+  expiresIn: 900,
+  account: { id: 10, email: 'shopper@example.com', role: 'CUSTOMER' as const },
+}
+
+it('protects customer routes, returns to the requested destination, and signs out', async () => {
+  window.history.replaceState({}, '', '/cart?source=footer')
+  const requests: { url: URL; init?: RequestInit }[] = []
+  vi.stubGlobal(
+    'fetch',
+    vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = new URL(String(input))
+      requests.push({ url, init })
+      if (url.pathname.endsWith('/auth/login')) return jsonResponse(customerLogin)
+      if (url.pathname.endsWith('/customers/me/cart'))
+        return jsonResponse({ id: 1, items: [], subtotal: 0, currency: 'PKR' })
+      return jsonResponse({ message: 'Unavailable' }, 503)
+    }),
+  )
+  render(<App />)
+
+  expect(await screen.findByRole('heading', { name: 'Good to see you.' })).toBeVisible()
+  expect(window.location.pathname).toBe('/sign-in')
+  expect(window.location.search).toBe('')
+  fireEvent.change(screen.getByLabelText('Email address'), {
+    target: { value: 'shopper@example.com' },
+  })
+  fireEvent.change(screen.getByLabelText('Password'), { target: { value: 'correct-password' } })
+  fireEvent.click(screen.getByRole('button', { name: 'Sign in' }))
+  expect(await screen.findByRole('heading', { name: 'Your bag' })).toBeVisible()
+  expect(window.location.search).toBe('?source=footer')
+  expect(requests.some(({ url }) => url.pathname.endsWith('/customers/me/cart'))).toBe(true)
+  const cartRequest = requests.find(({ url }) => url.pathname.endsWith('/customers/me/cart'))
+  expect(new Headers(cartRequest?.init?.headers).get('Authorization')).toBe(
+    'Bearer test-access-token',
+  )
+
+  fireEvent.click(screen.getByRole('button', { name: 'Sign out' }))
+  expect(await screen.findByRole('heading', { name: 'Good to see you.' })).toBeVisible()
+  expect(screen.getByRole('button', { name: 'Sign in' })).toBeVisible()
+  expect(hasAccessToken()).toBe(false)
+})
+
+it('clears an expired bearer session after an unauthorized customer request', async () => {
+  window.history.replaceState({}, '', '/sign-in')
+  vi.stubGlobal(
+    'fetch',
+    vi.fn(async (input: RequestInfo | URL) => {
+      const url = new URL(String(input))
+      if (url.pathname.endsWith('/auth/login')) return jsonResponse(customerLogin)
+      if (url.pathname.endsWith('/customers/me/addresses'))
+        return jsonResponse({ message: 'Unauthorized' }, 401)
+      return jsonResponse({ message: 'Unavailable' }, 503)
+    }),
+  )
+  render(<App />)
+  fireEvent.change(await screen.findByLabelText('Email address'), {
+    target: { value: 'shopper@example.com' },
+  })
+  fireEvent.change(screen.getByLabelText('Password'), { target: { value: 'correct-password' } })
+  fireEvent.click(screen.getByRole('button', { name: 'Sign in' }))
+  await waitFor(() => expect(hasAccessToken()).toBe(false))
+  await waitFor(() =>
+    expect(within(screen.getByRole('banner')).getByRole('link', { name: /Sign in/ })).toBeVisible(),
+  )
+})
+
+it('validates registration locally and reports duplicate account safely', async () => {
+  window.history.replaceState({}, '', '/register')
+  const authRequests: URL[] = []
+  vi.stubGlobal(
+    'fetch',
+    vi.fn(async (input: RequestInfo | URL) => {
+      const url = new URL(String(input))
+      if (url.pathname.endsWith('/registrations')) {
+        authRequests.push(url)
+        return jsonResponse({ message: 'Account identifier is already registered.' }, 409)
+      }
+      return jsonResponse({ message: 'Unavailable' }, 503)
+    }),
+  )
+  render(<App />)
+  fireEvent.change(await screen.findByLabelText('Email address'), {
+    target: { value: 'shopper@example.com' },
+  })
+  fireEvent.change(screen.getByLabelText('Password'), { target: { value: 'short' } })
+  fireEvent.click(screen.getByRole('button', { name: 'Create account' }))
+  expect(await screen.findByText('Use at least 12 characters.')).toBeVisible()
+  expect(authRequests).toHaveLength(0)
+
+  fireEvent.change(screen.getByLabelText('Password'), {
+    target: { value: 'a-long-enough-password' },
+  })
+  fireEvent.click(screen.getByRole('button', { name: 'Create account' }))
+  expect(await screen.findByRole('alert')).toHaveTextContent(
+    'An account with this email address already exists.',
+  )
+  expect(authRequests).toHaveLength(1)
+})
+
+it('shows rejected login feedback and supports password visibility toggle', async () => {
+  window.history.replaceState({}, '', '/sign-in')
+  vi.stubGlobal(
+    'fetch',
+    vi.fn(async () => jsonResponse({ message: 'Invalid email or password.' }, 401)),
+  )
+  render(<App />)
+  const password = await screen.findByLabelText('Password')
+  fireEvent.change(screen.getByLabelText('Email address'), {
+    target: { value: 'shopper@example.com' },
+  })
+  fireEvent.change(password, { target: { value: 'incorrect-password' } })
+  fireEvent.click(screen.getByRole('button', { name: 'Show password' }))
+  expect(screen.getByLabelText('Password')).toHaveAttribute('type', 'text')
+  fireEvent.click(screen.getByRole('button', { name: 'Sign in' }))
+  expect(await screen.findByRole('alert')).toHaveTextContent('Email or password is incorrect.')
+  expect(screen.getByLabelText('Password')).toHaveValue('incorrect-password')
+})
+
+it('creates an account through the documented registration request and routes to sign-in', async () => {
+  window.history.replaceState({}, '', '/register')
+  let request: { url: URL; init?: RequestInit } | undefined
+  vi.stubGlobal(
+    'fetch',
+    vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = new URL(String(input))
+      if (url.pathname.endsWith('/registrations')) {
+        request = { url, init }
+        return jsonResponse(
+          {
+            id: 20,
+            email: 'shopper@example.com',
+            createdAt: '2026-10-14T12:00:00Z',
+          },
+          201,
+        )
+      }
+      return jsonResponse({ message: 'Unavailable' }, 503)
+    }),
+  )
+  render(<App />)
+  fireEvent.change(await screen.findByLabelText('Email address'), {
+    target: { value: ' Shopper@example.com ' },
+  })
+  fireEvent.change(screen.getByLabelText('Password'), {
+    target: { value: 'a-long-enough-password' },
+  })
+  fireEvent.click(screen.getByRole('button', { name: 'Create account' }))
+  expect(await screen.findByRole('status')).toHaveTextContent(
+    'Your account is ready. Sign in to continue.',
+  )
+  expect(request?.url.pathname).toBe('/api/v1/registrations')
+  expect(JSON.parse(String(request?.init?.body))).toEqual({
+    email: 'Shopper@example.com',
+    password: 'a-long-enough-password',
+  })
+  expect(hasAccessToken()).toBe(false)
+})
+
+it('disables repeated sign-in submissions while the request is pending', async () => {
+  window.history.replaceState({}, '', '/sign-in')
+  let resolveLogin: ((response: Response) => void) | undefined
+  const pending = new Promise<Response>((resolve) => {
+    resolveLogin = resolve
+  })
+  let loginCalls = 0
+  vi.stubGlobal(
+    'fetch',
+    vi.fn((input: RequestInfo | URL) => {
+      if (new URL(String(input)).pathname.endsWith('/auth/login')) {
+        loginCalls += 1
+        return pending
+      }
+      return Promise.resolve(jsonResponse({ message: 'Unavailable' }, 503))
+    }),
+  )
+  render(<App />)
+  fireEvent.change(await screen.findByLabelText('Email address'), {
+    target: { value: 'shopper@example.com' },
+  })
+  fireEvent.change(screen.getByLabelText('Password'), { target: { value: 'correct-password' } })
+  const submit = screen.getByRole('button', { name: 'Sign in' })
+  fireEvent.click(submit)
+  expect(await screen.findByRole('button', { name: 'One moment…' })).toBeDisabled()
+  fireEvent.click(screen.getByRole('button', { name: 'One moment…' }))
+  expect(loginCalls).toBe(1)
+  resolveLogin?.(jsonResponse(customerLogin))
+  expect(await screen.findByRole('heading', { name: 'Hello, shopper.' })).toBeVisible()
 })
