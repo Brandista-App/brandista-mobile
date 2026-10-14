@@ -469,3 +469,154 @@ it('disables repeated sign-in submissions while the request is pending', async (
   resolveLogin?.(jsonResponse(customerLogin))
   expect(await screen.findByRole('heading', { name: 'Hello, shopper.' })).toBeVisible()
 })
+
+const populatedCart = {
+  id: 1,
+  items: [
+    {
+      itemId: 9,
+      productId: 42,
+      productName: 'Linen Shirt',
+      brandName: 'Example Atelier',
+      unitPrice: 1299.95,
+      quantity: 2,
+      lineSubtotal: 2599.9,
+      available: true,
+    },
+  ],
+  subtotal: 2599.9,
+  currency: 'PKR' as const,
+}
+
+it('loads the server cart, updates quantity, preserves prices, and removes an item', async () => {
+  window.history.replaceState({}, '', '/cart')
+  const requests: { url: URL; method: string; body?: string }[] = []
+  let removed = false
+  let currentCart = populatedCart
+  vi.stubGlobal(
+    'fetch',
+    vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = new URL(String(input))
+      const method = init?.method || 'GET'
+      requests.push({ url, method, body: typeof init?.body === 'string' ? init.body : undefined })
+      if (url.pathname.endsWith('/auth/login')) return jsonResponse(customerLogin)
+      if (url.pathname.endsWith('/customers/me/cart/items/9') && method === 'PATCH') {
+        expect(JSON.parse(String(init?.body))).toEqual({ quantity: 3 })
+        currentCart = {
+          ...populatedCart,
+          items: [{ ...populatedCart.items[0]!, quantity: 3, lineSubtotal: 3899.85 }],
+          subtotal: 3899.85,
+        }
+        return jsonResponse(currentCart)
+      }
+      if (url.pathname.endsWith('/customers/me/cart/items/9') && method === 'DELETE') {
+        removed = true
+        return new Response(null, { status: 204 })
+      }
+      if (url.pathname.endsWith('/customers/me/cart') && method === 'GET')
+        return jsonResponse(
+          removed ? { id: 1, items: [], subtotal: 0, currency: 'PKR' } : currentCart,
+        )
+      return jsonResponse({ message: 'Unavailable' }, 503)
+    }),
+  )
+  render(<App />)
+  fireEvent.change(await screen.findByLabelText('Email address'), {
+    target: { value: 'shopper@example.com' },
+  })
+  fireEvent.change(screen.getByLabelText('Password'), { target: { value: 'correct-password' } })
+  fireEvent.click(screen.getByRole('button', { name: 'Sign in' }))
+
+  expect(await screen.findByRole('heading', { name: 'Your bag' })).toBeVisible()
+  expect(await screen.findByRole('heading', { name: 'Linen Shirt' })).toBeVisible()
+  expect(screen.getByText(/Unit price:.*1,299\.95/)).toBeVisible()
+  expect(screen.getAllByText(/2,599\.9/)).toHaveLength(2)
+  expect(screen.getByRole('button', { name: 'Checkout unavailable' })).toBeDisabled()
+  expect(screen.getByText(/Checkout and order placement are not available yet/)).toBeVisible()
+
+  const quantity = screen.getByRole('spinbutton', { name: 'Quantity' })
+  fireEvent.change(quantity, { target: { value: '3' } })
+  expect(requests.some(({ method }) => method === 'PATCH')).toBe(false)
+  fireEvent.click(screen.getByRole('button', { name: 'Update quantity' }))
+  expect(await screen.findAllByText(/3,899\.85/)).toHaveLength(2)
+  const patch = requests.find(({ method }) => method === 'PATCH')
+  expect(patch?.url.pathname).toBe('/api/v1/customers/me/cart/items/9')
+  expect(JSON.parse(patch?.body || '{}')).toEqual({ quantity: 3 })
+
+  fireEvent.click(screen.getByRole('button', { name: 'Remove' }))
+  expect(
+    await screen.findByRole('heading', { name: 'Your bag is taking a little breather' }),
+  ).toBeVisible()
+  expect(
+    requests.some(({ method, url }) => method === 'DELETE' && url.pathname.endsWith('/items/9')),
+  ).toBe(true)
+  expect(screen.getByRole('link', { name: 'Explore the collection' })).toHaveAttribute(
+    'href',
+    '/products',
+  )
+})
+
+it('shows the server empty-cart response without inventing item data', async () => {
+  window.history.replaceState({}, '', '/cart')
+  vi.stubGlobal(
+    'fetch',
+    vi.fn(async (input: RequestInfo | URL) => {
+      const url = new URL(String(input))
+      if (url.pathname.endsWith('/auth/login')) return jsonResponse(customerLogin)
+      if (url.pathname.endsWith('/customers/me/cart'))
+        return jsonResponse({ id: 5, items: [], subtotal: 0, currency: 'PKR' })
+      return jsonResponse({ message: 'Unavailable' }, 503)
+    }),
+  )
+  render(<App />)
+  fireEvent.change(await screen.findByLabelText('Email address'), {
+    target: { value: 'shopper@example.com' },
+  })
+  fireEvent.change(screen.getByLabelText('Password'), { target: { value: 'correct-password' } })
+  fireEvent.click(screen.getByRole('button', { name: 'Sign in' }))
+  expect(
+    await screen.findByRole('heading', { name: 'Your bag is taking a little breather' }),
+  ).toBeVisible()
+  expect(screen.getByRole('link', { name: 'Explore the collection' })).toBeVisible()
+})
+
+it('shows an unavailable product response instead of reporting add-to-cart success', async () => {
+  window.history.replaceState({}, '', '/sign-in')
+  vi.stubGlobal(
+    'fetch',
+    vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = new URL(String(input))
+      if (url.pathname.endsWith('/auth/login')) return jsonResponse(customerLogin)
+      if (url.pathname.endsWith('/categories')) return jsonResponse(categoryPage)
+      if (url.pathname.endsWith('/brands'))
+        return jsonResponse({ content: [], page: 0, size: 50, totalElements: 0, totalPages: 0 })
+      if (url.pathname.endsWith('/products/linen-shirt')) return jsonResponse(product)
+      if (url.pathname.endsWith('/products')) return jsonResponse(productPage())
+      if (url.pathname.endsWith('/customers/me/cart/items') && init?.method === 'POST')
+        return jsonResponse(
+          { message: 'Product is not currently available to add to the cart.' },
+          409,
+        )
+      return jsonResponse({ message: 'Unavailable' }, 503)
+    }),
+  )
+  render(<App />)
+  fireEvent.change(await screen.findByLabelText('Email address'), {
+    target: { value: 'shopper@example.com' },
+  })
+  fireEvent.change(screen.getByLabelText('Password'), { target: { value: 'correct-password' } })
+  fireEvent.click(screen.getByRole('button', { name: 'Sign in' }))
+  expect(await screen.findByRole('heading', { name: 'Hello, shopper.' })).toBeVisible()
+  fireEvent.click(
+    within(screen.getByRole('navigation', { name: 'Main navigation' })).getByRole('link', {
+      name: 'Shop all',
+    }),
+  )
+  fireEvent.click(await screen.findByRole('link', { name: 'Linen Shirt' }))
+  await screen.findByRole('heading', { name: 'Linen Shirt' })
+  fireEvent.click(screen.getByRole('button', { name: 'Add to your bag ↗' }))
+  expect(await screen.findByRole('status')).toHaveTextContent(
+    'This product is no longer available to add. Refresh the page to check again.',
+  )
+  expect(screen.queryByText('Added to your bag.')).not.toBeInTheDocument()
+})

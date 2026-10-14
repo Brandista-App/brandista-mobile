@@ -642,6 +642,7 @@ function ProductDetail() {
   const [adding, setAdding] = useState(false)
   const [notice, setNotice] = useState('')
   const { account } = useAuth()
+  const location = useLocation()
   const requestedQuantity = Number(quantity)
   const validQuantity =
     Number.isInteger(requestedQuantity) && requestedQuantity >= 1 && requestedQuantity <= 2147483647
@@ -688,7 +689,14 @@ function ProductDetail() {
       await addCartItem(item.id, requestedQuantity)
       setNotice('Added to your bag.')
     } catch (e) {
-      setNotice(e instanceof Error ? e.message : 'Could not update your bag.')
+      if (e instanceof ApiError && e.status === 401) setNotice('Sign in to add this to your bag.')
+      else if (e instanceof ApiError && e.status === 409)
+        setNotice('This product is no longer available to add. Refresh the page to check again.')
+      else if (e instanceof ApiError && e.status === 400)
+        setNotice('Choose a valid quantity and try again.')
+      else if (e instanceof ApiError && e.status >= 500)
+        setNotice('The bag service is unavailable right now. Please try again shortly.')
+      else setNotice(e instanceof Error ? e.message : 'Could not update your bag.')
     } finally {
       setAdding(false)
     }
@@ -749,7 +757,12 @@ function ProductDetail() {
           </button>
           {notice && (
             <p role="status" className="notice">
-              {notice} {notice.startsWith('Sign in') && <Link to="/sign-in">Sign in</Link>}
+              {notice}{' '}
+              {notice.startsWith('Sign in') && (
+                <Link to="/sign-in" state={{ from: `${location.pathname}${location.search}` }}>
+                  Sign in
+                </Link>
+              )}
             </p>
           )}
           <small className="note">
@@ -992,37 +1005,115 @@ function Auth({ mode }: { mode: 'sign-in' | 'register' }) {
     </section>
   )
 }
+function cartErrorMessage(error: unknown, fallback: string) {
+  if (error instanceof ApiError) {
+    if (error.status === 400) return 'That quantity is not valid. Choose a positive whole number.'
+    if (error.status === 404)
+      return 'That cart item could not be found. Refresh your bag to sync it.'
+    if (error.status >= 500 || error.status === 0)
+      return 'We could not reach the bag service. Your saved bag has not been replaced.'
+    return error.message || fallback
+  }
+  return error instanceof Error ? error.message : fallback
+}
+
 function CartPage() {
   const { account } = useAuth()
   const [cart, setCart] = useState<Cart | null>(null)
   const [error, setError] = useState('')
+  const [loading, setLoading] = useState(true)
   const [busy, setBusy] = useState(false)
-  async function load() {
+  const [quantityDrafts, setQuantityDrafts] = useState<Record<number, string>>({})
+  const [quantityErrors, setQuantityErrors] = useState<Record<number, string>>({})
+  const requestId = useRef(0)
+  const mutationLock = useRef(false)
+
+  const load = useCallback(async () => {
+    const request = ++requestId.current
+    setLoading(true)
     setError('')
     try {
-      setCart(await getCart())
+      const result = await getCart()
+      if (request === requestId.current) {
+        setCart(result)
+        setQuantityDrafts({})
+        setQuantityErrors({})
+      }
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Could not load your bag.')
+      if (request === requestId.current) setError(cartErrorMessage(e, 'Could not load your bag.'))
+    } finally {
+      if (request === requestId.current) setLoading(false)
     }
-  }
+  }, [])
+
   useEffect(() => {
     if (account) void load()
-  }, [account])
-  async function mutate(action: () => Promise<unknown>) {
+  }, [account, load])
+
+  async function mutate(action: () => Promise<Cart>) {
+    if (mutationLock.current) return
+    mutationLock.current = true
+    requestId.current += 1
     setBusy(true)
+    setError('')
     try {
-      await action()
-      await load()
+      const updated = await action()
+      setCart(updated)
+      setQuantityDrafts({})
+      setQuantityErrors({})
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Could not save that change.')
+      setError(cartErrorMessage(e, 'Could not save that change. Your bag is still shown below.'))
     } finally {
+      mutationLock.current = false
       setBusy(false)
     }
   }
+
+  async function saveQuantity(e: FormEvent, item: Cart['items'][number]) {
+    e.preventDefault()
+    if (busy || mutationLock.current) return
+    const raw = quantityDrafts[item.itemId] ?? String(item.quantity)
+    const quantity = Number(raw)
+    if (!raw.trim() || !Number.isInteger(quantity) || quantity < 1 || quantity > 2147483647) {
+      setQuantityErrors((current) => ({
+        ...current,
+        [item.itemId]: 'Enter a whole-number quantity from 1 to 2,147,483,647.',
+      }))
+      return
+    }
+    if (quantity === item.quantity) return
+    await mutate(() => updateCartItem(item.itemId, quantity))
+  }
+
+  async function removeItem(itemId: number) {
+    await mutate(async () => {
+      await removeCartItem(itemId)
+      return getCart()
+    })
+  }
+
   return (
     <section className="wrap page-space">
       <div className="eyebrow">Saved for later? It’s right here</div>
       <h1 className="page-title">Your bag</h1>
+      {error && cart && (
+        <div className="cart-error" role="alert">
+          <span>{error}</span>
+          <button
+            className="text-link"
+            type="button"
+            onClick={() => void load()}
+            disabled={loading}
+          >
+            {loading ? 'Refreshing…' : 'Refresh bag'}
+          </button>
+        </div>
+      )}
+      {loading && cart && (
+        <div className="cart-refresh" role="status">
+          Refreshing your bag…
+        </div>
+      )}
       {!account ? (
         <div className="prompt">
           <p>Sign in to see your saved finds.</p>
@@ -1030,69 +1121,113 @@ function CartPage() {
             Sign in to your account
           </Link>
         </div>
-      ) : error ? (
-        <Failure message={error} retry={() => void load()} />
-      ) : !cart ? (
+      ) : loading && !cart ? (
         <Loading />
-      ) : !cart.items.length ? (
+      ) : error && !cart ? (
+        <Failure message={error} retry={() => void load()} />
+      ) : cart && !cart.items.length ? (
         <Empty title="Your bag is taking a little breather">
           <p>Find something lovely to bring it to life.</p>
           <Link className="button" to="/products">
             Explore the collection
           </Link>
         </Empty>
-      ) : (
+      ) : cart ? (
         <>
           <div className="cart-list">
-            {cart.items.map((i) => (
-              <article className="cart-row" key={i.itemId}>
-                <div className="cart-thumb">
-                  <i className="object" />
-                </div>
-                <div>
-                  <small>{i.brandName}</small>
-                  <h2>{i.productName}</h2>
-                  {!i.available && (
-                    <small className="inline-error">No longer available — please remove.</small>
-                  )}
-                  <label className="qty">
-                    Quantity{' '}
-                    <input
-                      type="number"
-                      min="1"
-                      max="2147483647"
-                      value={i.quantity}
+            {cart.items.map((item) => {
+              const quantityText = quantityDrafts[item.itemId] ?? String(item.quantity)
+              const quantityChanged = quantityText !== String(item.quantity)
+              return (
+                <article className="cart-row" key={item.itemId}>
+                  <div className="cart-thumb" aria-hidden="true">
+                    <i className="object" />
+                  </div>
+                  <div className="cart-item-details">
+                    <small>{item.brandName}</small>
+                    <h2>{item.productName}</h2>
+                    <p className="unit-price">Unit price: {price(item.unitPrice, cart.currency)}</p>
+                    {!item.available && (
+                      <small className="inline-error" role="status">
+                        No longer available — remove this item to continue later.
+                      </small>
+                    )}
+                    <form
+                      className="qty-update"
+                      onSubmit={(e) => void saveQuantity(e, item)}
+                      noValidate
+                    >
+                      <label className="qty" htmlFor={`cart-quantity-${item.itemId}`}>
+                        Quantity
+                      </label>
+                      <input
+                        id={`cart-quantity-${item.itemId}`}
+                        type="number"
+                        min="1"
+                        max="2147483647"
+                        step="1"
+                        required
+                        value={quantityText}
+                        aria-invalid={Boolean(quantityErrors[item.itemId])}
+                        aria-describedby={
+                          quantityErrors[item.itemId]
+                            ? `cart-quantity-error-${item.itemId}`
+                            : undefined
+                        }
+                        disabled={busy}
+                        onChange={(event) => {
+                          setQuantityDrafts((current) => ({
+                            ...current,
+                            [item.itemId]: event.target.value,
+                          }))
+                          setQuantityErrors((current) => ({ ...current, [item.itemId]: '' }))
+                        }}
+                      />
+                      <button
+                        className="button outline small"
+                        type="submit"
+                        disabled={busy || !quantityChanged}
+                      >
+                        {busy ? 'Saving…' : 'Update quantity'}
+                      </button>
+                      {quantityErrors[item.itemId] && (
+                        <small
+                          id={`cart-quantity-error-${item.itemId}`}
+                          className="field-error"
+                          role="alert"
+                        >
+                          {quantityErrors[item.itemId]}
+                        </small>
+                      )}
+                    </form>
+                  </div>
+                  <div className="cart-end">
+                    <span>Line total</span>
+                    <b>{price(item.lineSubtotal, cart.currency)}</b>
+                    <button
+                      type="button"
+                      onClick={() => void removeItem(item.itemId)}
                       disabled={busy}
-                      onChange={(e) => {
-                        const q = Number(e.target.value)
-                        if (Number.isInteger(q) && q > 0)
-                          void mutate(() => updateCartItem(i.itemId, q))
-                      }}
-                    />
-                  </label>
-                </div>
-                <div className="cart-end">
-                  <b>{price(i.lineSubtotal)}</b>
-                  <button
-                    onClick={() => void mutate(() => removeCartItem(i.itemId))}
-                    disabled={busy}
-                  >
-                    Remove
-                  </button>
-                </div>
-              </article>
-            ))}
+                    >
+                      {busy ? 'Updating…' : 'Remove'}
+                    </button>
+                  </div>
+                </article>
+              )
+            })}
           </div>
           <div className="summary">
             <span>Estimated subtotal</span>
-            <b>{price(cart.subtotal)}</b>
-            <p>Prices reflect the current catalogue and may change before checkout.</p>
-            <button className="button" disabled>
-              Checkout is not available yet
+            <b>{price(cart.subtotal, cart.currency)}</b>
+            <p>
+              Cart totals come from the server. Checkout and order placement are not available yet.
+            </p>
+            <button className="button" type="button" disabled aria-disabled="true">
+              Checkout unavailable
             </button>
           </div>
         </>
-      )}
+      ) : null}
       <Link className="text-link" to="/products">
         ← Keep exploring
       </Link>
