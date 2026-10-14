@@ -4,8 +4,10 @@ export const discoverProducts = (params = new URLSearchParams()) =>
   apiRequest<Page<Product>>(`/products${params.size ? `?${params}` : ''}`)
 export const getProduct = (slug: string) =>
   apiRequest<Product>(`/products/${encodeURIComponent(slug)}`)
-export const discoverBrands = () => apiRequest<Page<Brand>>('/brands')
-export const discoverCategories = () => apiRequest<Page<Category>>('/categories')
+export const discoverBrands = (params = new URLSearchParams()) =>
+  apiRequest<Page<Brand>>(`/brands${params.size ? `?${params}` : ''}`)
+export const discoverCategories = (params = new URLSearchParams()) =>
+  apiRequest<Page<Category>>(`/categories${params.size ? `?${params}` : ''}`)
 export const register = (email: string, password: string) =>
   apiRequest<{ id: number; email: string; createdAt: string }>('/registrations', {
     method: 'POST',

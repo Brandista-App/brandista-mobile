@@ -3,13 +3,16 @@ import '@testing-library/jest-dom/vitest'
 import { cleanup, fireEvent, render, screen, within } from '@testing-library/react'
 import { afterEach, beforeEach, expect, it, vi } from 'vitest'
 import { App } from './app'
+import { setAccessToken } from './api/client'
 
 beforeEach(() => {
   window.history.replaceState({}, '', '/')
+  setAccessToken(null)
 })
 
 afterEach(() => {
   cleanup()
+  setAccessToken(null)
   vi.unstubAllGlobals()
 })
 
@@ -36,6 +39,13 @@ it('keeps navigation usable when catalogue requests fail', async () => {
 
   expect(await screen.findByRole('heading', { name: 'Meet the makers' })).toBeVisible()
   expect(await screen.findByRole('alert')).toHaveTextContent('We could not reach Brandista')
+  fireEvent.click(
+    within(screen.getByRole('navigation', { name: 'Main navigation' })).getByRole('link', {
+      name: 'Shop all',
+    }),
+  )
+  expect(await screen.findByRole('heading', { name: 'Find your next favourite' })).toBeVisible()
+  expect(await screen.findByRole('button', { name: 'Try again' })).toBeVisible()
 })
 
 const categoryPage = {
@@ -115,8 +125,12 @@ it('loads and filters the documented catalogue, paginates, and opens a product',
   })
   fireEvent.submit(screen.getByRole('search'))
   expect(await screen.findByRole('heading', { name: 'Find your next favourite' })).toBeVisible()
+  expect(screen.getByRole('textbox', { name: 'Search products' })).toHaveValue('linen')
   const category = await screen.findByRole('combobox', { name: 'Category' })
   fireEvent.change(category, { target: { value: '7' } })
+  fireEvent.change(screen.getByRole('combobox', { name: 'Brand' }), {
+    target: { value: '3' },
+  })
   fireEvent.change(screen.getByRole('combobox', { name: 'Sort by' }), {
     target: { value: 'price_asc' },
   })
@@ -126,6 +140,7 @@ it('loads and filters the documented catalogue, paginates, and opens a product',
 
   const catalogCalls = requests.filter((url) => url.pathname.endsWith('/products'))
   expect(catalogCalls.some((url) => url.searchParams.get('categoryId') === '7')).toBe(true)
+  expect(catalogCalls.some((url) => url.searchParams.get('brandId') === '3')).toBe(true)
   expect(catalogCalls.some((url) => url.searchParams.get('keyword') === 'linen')).toBe(true)
   expect(catalogCalls.some((url) => url.searchParams.get('sort') === 'price_asc')).toBe(true)
   expect(catalogCalls.some((url) => url.searchParams.get('page') === '1')).toBe(true)
@@ -168,4 +183,97 @@ it('allows retrying a failed product detail request', async () => {
   fireEvent.click(screen.getByRole('button', { name: 'Try again' }))
   expect(await screen.findByRole('heading', { name: 'Linen Shirt' })).toBeVisible()
   expect(detailRequests).toBe(2)
+})
+
+it('shows an empty search result and clears active search filters', async () => {
+  window.history.replaceState({}, '', '/products?keyword=not-found')
+  const requests: URL[] = []
+  vi.stubGlobal(
+    'fetch',
+    vi.fn(async (input: RequestInfo | URL) => {
+      const url = new URL(String(input))
+      requests.push(url)
+      if (url.pathname.endsWith('/categories'))
+        return jsonResponse({ ...categoryPage, content: [] })
+      if (url.pathname.endsWith('/brands'))
+        return jsonResponse({ content: [], page: 0, size: 50, totalElements: 0, totalPages: 0 })
+      if (url.pathname.endsWith('/products'))
+        return jsonResponse({ content: [], page: 0, size: 12, totalElements: 0, totalPages: 0 })
+      return jsonResponse({ message: 'Unexpected endpoint' }, 404)
+    }),
+  )
+  render(<App />)
+
+  expect(await screen.findByRole('heading', { name: 'No finds just yet' })).toBeVisible()
+  expect(requests.some((url) => url.searchParams.get('keyword') === 'not-found')).toBe(true)
+  fireEvent.click(screen.getByRole('button', { name: 'Clear filters' }))
+  await screen.findByRole('heading', { name: 'No finds just yet' })
+  expect(
+    requests.some((url) => url.pathname.endsWith('/products') && !url.searchParams.has('keyword')),
+  ).toBe(true)
+})
+
+it('explains when a product slug does not exist', async () => {
+  window.history.replaceState({}, '', '/products/missing-product')
+  vi.stubGlobal(
+    'fetch',
+    vi.fn().mockResolvedValue(jsonResponse({ message: 'Product not found' }, 404)),
+  )
+  render(<App />)
+
+  expect(await screen.findByRole('alert')).toHaveTextContent('This find is no longer available.')
+  expect(screen.getByRole('button', { name: 'Try again' })).toBeVisible()
+})
+
+it('submits the selected quantity to the authenticated cart endpoint', async () => {
+  window.history.replaceState({}, '', '/sign-in')
+  let cartRequest: { url: URL; init?: RequestInit } | undefined
+  vi.stubGlobal(
+    'fetch',
+    vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = new URL(String(input))
+      if (url.pathname.endsWith('/auth/login'))
+        return jsonResponse({
+          accessToken: 'test-access-token',
+          tokenType: 'Bearer',
+          expiresIn: 900,
+          account: { id: 10, email: 'shopper@example.com', role: 'CUSTOMER' },
+        })
+      if (url.pathname.endsWith('/categories')) return jsonResponse(categoryPage)
+      if (url.pathname.endsWith('/brands'))
+        return jsonResponse({ content: [], page: 0, size: 50, totalElements: 0, totalPages: 0 })
+      if (url.pathname.endsWith('/products/linen-shirt')) return jsonResponse(product)
+      if (url.pathname.endsWith('/products')) return jsonResponse(productPage())
+      if (url.pathname.endsWith('/customers/me/cart/items')) {
+        cartRequest = { url, init }
+        return jsonResponse({ id: 1, items: [], subtotal: 0, currency: 'PKR' }, 201)
+      }
+      return jsonResponse({ message: 'Unexpected endpoint' }, 404)
+    }),
+  )
+  render(<App />)
+
+  fireEvent.change(screen.getByLabelText('Email address'), {
+    target: { value: 'shopper@example.com' },
+  })
+  fireEvent.change(screen.getByLabelText('Password'), { target: { value: 'not-a-real-password' } })
+  fireEvent.click(screen.getByRole('button', { name: 'Sign in' }))
+  expect(await screen.findByRole('heading', { name: 'Hello, shopper.' })).toBeVisible()
+  fireEvent.click(
+    within(screen.getByRole('navigation', { name: 'Main navigation' })).getByRole('link', {
+      name: 'Shop all',
+    }),
+  )
+  fireEvent.click(await screen.findByRole('link', { name: 'Linen Shirt' }))
+  await screen.findByRole('heading', { name: 'Linen Shirt' })
+  fireEvent.change(screen.getByRole('spinbutton', { name: 'Quantity' }), {
+    target: { value: '3' },
+  })
+  fireEvent.click(screen.getByRole('button', { name: 'Add to your bag ↗' }))
+  expect(await screen.findByText('Added to your bag.')).toBeVisible()
+  expect(cartRequest?.url.pathname).toBe('/api/v1/customers/me/cart/items')
+  expect(JSON.parse(String(cartRequest?.init?.body))).toEqual({ productId: 42, quantity: 3 })
+  expect(new Headers(cartRequest?.init?.headers).get('Authorization')).toBe(
+    'Bearer test-access-token',
+  )
 })

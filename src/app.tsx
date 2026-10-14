@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import type { FormEvent } from 'react'
 import {
   BrowserRouter,
@@ -90,8 +90,16 @@ function ProductCard({ product }: { product: Product }) {
 function Header() {
   const [open, setOpen] = useState(false)
   const [text, setText] = useState('')
+  const location = useLocation()
   const { account, signOut } = useAuth()
   const nav = useNavigate()
+  useEffect(() => {
+    setText(
+      location.pathname === '/products'
+        ? new URLSearchParams(location.search).get('keyword') || ''
+        : '',
+    )
+  }, [location.pathname, location.search])
   function search(e: FormEvent) {
     e.preventDefault()
     nav(`/products${text.trim() ? `?keyword=${encodeURIComponent(text.trim())}` : ''}`)
@@ -121,6 +129,7 @@ function Header() {
           </label>
           <input
             id="q"
+            maxLength={100}
             value={text}
             onChange={(e) => setText(e.target.value)}
             placeholder="Find something lovely…"
@@ -423,33 +432,59 @@ function Products() {
   const [query, setQuery] = useSearchParams()
   const [data, setData] = useState<Page<Product> | null>(null)
   const [categories, setCategories] = useState<Category[]>([])
+  const [brands, setBrands] = useState<Brand[]>([])
+  const [filtersLoading, setFiltersLoading] = useState(true)
+  const [filterError, setFilterError] = useState('')
   const [busy, setBusy] = useState(true)
   const [error, setError] = useState('')
+  const requestId = useRef(0)
   const keyword = query.get('keyword') || ''
   const category = query.get('categoryId') || ''
+  const brand = query.get('brandId') || ''
   const sort = query.get('sort') || 'default'
   const currentPage = query.get('page') || '0'
   const load = useCallback(async () => {
+    const request = ++requestId.current
     setBusy(true)
     setError('')
     const p = new URLSearchParams({ page: currentPage, size: '12', sort })
     if (keyword) p.set('keyword', keyword)
     if (category) p.set('categoryId', category)
+    if (brand) p.set('brandId', brand)
     try {
-      setData(await discoverProducts(p))
+      const result = await discoverProducts(p)
+      if (request === requestId.current) setData(result)
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Could not load products.')
+      if (request === requestId.current)
+        setError(e instanceof Error ? e.message : 'Could not load products.')
     } finally {
-      setBusy(false)
+      if (request === requestId.current) setBusy(false)
     }
-  }, [category, currentPage, keyword, sort])
+  }, [brand, category, currentPage, keyword, sort])
   useEffect(() => {
     void load()
+    return () => {
+      requestId.current += 1
+    }
   }, [load])
+  async function loadFilters() {
+    setFiltersLoading(true)
+    setFilterError('')
+    try {
+      const [categoryPage, brandPage] = await Promise.all([
+        discoverCategories(new URLSearchParams('size=100')),
+        discoverBrands(new URLSearchParams('size=100')),
+      ])
+      setCategories(categoryPage.content)
+      setBrands(brandPage.content)
+    } catch (e) {
+      setFilterError(e instanceof Error ? e.message : 'Could not load catalogue filters.')
+    } finally {
+      setFiltersLoading(false)
+    }
+  }
   useEffect(() => {
-    void discoverCategories()
-      .then((p) => setCategories(p.content))
-      .catch(() => setCategories([]))
+    void loadFilters()
   }, [])
   function change(key: string, value: string) {
     const next = new URLSearchParams(query)
@@ -469,14 +504,41 @@ function Products() {
         </div>
         <small>{data?.totalElements ?? '—'} finds</small>
       </div>
+      {filterError && (
+        <div className="filter-error" role="alert">
+          <span>{filterError}</span>
+          <button className="text-link" onClick={() => void loadFilters()}>
+            Retry filters
+          </button>
+        </div>
+      )}
       <div className="filters">
         <label>
           Category
-          <select value={category} onChange={(e) => change('categoryId', e.target.value)}>
+          <select
+            value={category}
+            disabled={filtersLoading}
+            onChange={(e) => change('categoryId', e.target.value)}
+          >
             <option value="">All categories</option>
             {categories.map((c) => (
               <option key={c.id} value={c.id}>
                 {c.name}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label>
+          Brand
+          <select
+            value={brand}
+            disabled={filtersLoading}
+            onChange={(e) => change('brandId', e.target.value)}
+          >
+            <option value="">All brands</option>
+            {brands.map((b) => (
+              <option key={b.id} value={b.id}>
+                {b.name}
               </option>
             ))}
           </select>
@@ -545,13 +607,20 @@ function ProductDetail() {
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(true)
   const [retryCount, setRetryCount] = useState(0)
+  const [quantity, setQuantity] = useState('1')
+  const [adding, setAdding] = useState(false)
   const [notice, setNotice] = useState('')
   const { account } = useAuth()
+  const requestedQuantity = Number(quantity)
+  const validQuantity =
+    Number.isInteger(requestedQuantity) && requestedQuantity >= 1 && requestedQuantity <= 2147483647
   useEffect(() => {
     let active = true
     setLoading(true)
     setError('')
     setItem(null)
+    setQuantity('1')
+    setNotice('')
     getProduct(slug)
       .then((product) => {
         if (active) setItem(product)
@@ -579,11 +648,18 @@ function ProductDetail() {
       setNotice('Sign in to add this to your bag.')
       return
     }
+    if (!validQuantity) {
+      setNotice('Enter a quantity from 1 to 2,147,483,647.')
+      return
+    }
+    setAdding(true)
     try {
-      await addCartItem(item.id, 1)
+      await addCartItem(item.id, requestedQuantity)
       setNotice('Added to your bag.')
     } catch (e) {
       setNotice(e instanceof Error ? e.message : 'Could not update your bag.')
+    } finally {
+      setAdding(false)
     }
   }
   if (loading)
@@ -622,12 +698,23 @@ function ProductDetail() {
               ? '● Available to discover'
               : '○ Currently unavailable'}
           </div>
+          <label className="quantity-control">
+            Quantity
+            <input
+              type="number"
+              min="1"
+              max="2147483647"
+              step="1"
+              value={quantity}
+              onChange={(e) => setQuantity(e.target.value)}
+            />
+          </label>
           <button
-            disabled={item.availability !== 'AVAILABLE'}
+            disabled={item.availability !== 'AVAILABLE' || !validQuantity || adding}
             onClick={() => void add()}
             className="button"
           >
-            Add to your bag ↗
+            {adding ? 'Adding…' : 'Add to your bag ↗'}
           </button>
           {notice && (
             <p role="status" className="notice">
