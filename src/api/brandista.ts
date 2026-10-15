@@ -4,8 +4,17 @@ export const discoverProducts = (params = new URLSearchParams()) =>
   apiRequest<Page<Product>>(`/products${params.size ? `?${params}` : ''}`)
 export const getProduct = (slug: string) =>
   apiRequest<Product>(`/products/${encodeURIComponent(slug)}`)
-export const discoverBrands = (params = new URLSearchParams()) =>
-  apiRequest<Page<Brand>>(`/brands${params.size ? `?${params}` : ''}`)
+export const discoverBrands = async (params = new URLSearchParams()): Promise<Page<Brand>> => {
+  const brands = await apiRequest<Brand[]>(`/brands${params.size ? `?${params}` : ''}`)
+  if (!Array.isArray(brands)) throw new Error('Brandista returned an invalid brand list.')
+  return {
+    content: brands,
+    page: 0,
+    size: brands.length,
+    totalElements: brands.length,
+    totalPages: brands.length ? 1 : 0,
+  }
+}
 export const discoverCategories = (params = new URLSearchParams()) =>
   apiRequest<Page<Category>>(`/categories${params.size ? `?${params}` : ''}`)
 export const submitBrandApplication = (application: BrandApplicationSubmission) =>

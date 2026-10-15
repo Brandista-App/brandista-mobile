@@ -1,0 +1,20 @@
+.checkout-layout { display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:32px; margin:32px 0; align-items:start }
+.address-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:24px; margin:24px 0 }
+.saved-address,.checkout-review { border:1px solid #d8d9cf; padding:24px; min-width:0; overflow-wrap:anywhere; background:#faf9f5 }
+.delivery-text { display:grid; gap:6px; font-style:normal; overflow-wrap:anywhere }
+.checkout-actions { display:flex; flex-wrap:wrap; gap:12px; align-items:center; margin:20px 0 }
+.address-form { max-width:740px; margin-top:24px }
+.address-form fieldset { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:18px; border:0; padding:0; min-width:0 }
+.address-form label { display:grid; gap:7px; min-width:0 }
+.address-form textarea { width:100%; padding:12px; border:1px solid #bbbdb4; background:transparent; font:inherit }
+.address-form .checkout-actions,.address-form .inline-error { grid-column:1/-1 }
+.address-options { border:0; padding:0; margin-top:20px; min-width:0 }
+.address-option { display:flex; gap:14px; align-items:start; margin-bottom:16px; cursor:pointer }
+.address-option input { width:auto; margin-top:5px; flex-shrink:0 }
+.checkout-line { display:flex; justify-content:space-between; gap:14px; padding:16px 0; border-bottom:1px solid #d8d9cf; overflow-wrap:anywhere }
+.checkout-line div { display:grid; gap:6px; min-width:0 }
+.checkout-line b { flex-shrink:0 }
+.checkout-review .button { margin:8px 8px 0 0 }
+.order-totals { display:grid; grid-template-columns:minmax(0,1fr) auto; gap:12px; margin:24px 0 }
+.order-totals dd { margin:0; text-align:right }
+@media(max-width:767px) { .checkout-layout,.address-grid { grid-template-columns:minmax(0,1fr) } .address-form fieldset { grid-template-columns:minmax(0,1fr) } .saved-address,.checkout-review { padding:18px } .checkout-line { flex-wrap:wrap } .checkout-actions .button { width:auto } }

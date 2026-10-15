@@ -93,20 +93,12 @@ it('loads and filters the documented catalogue, paginates, and opens a product',
       requests.push(url)
       if (url.pathname.endsWith('/categories')) return jsonResponse(categoryPage)
       if (url.pathname.endsWith('/brands'))
-        return jsonResponse({
-          content: [
-            {
+        return jsonResponse([{
               id: 3,
               name: 'Example Atelier',
               slug: 'example-atelier',
               description: 'Made in Lahore.',
-            },
-          ],
-          page: 0,
-          size: 50,
-          totalElements: 1,
-          totalPages: 1,
-        })
+            }])
       if (url.pathname.endsWith('/products/linen-shirt')) return jsonResponse(product)
       if (url.pathname.endsWith('/products')) {
         const requestedPage = Number(url.searchParams.get('page') || 0)
@@ -165,7 +157,7 @@ it('allows retrying a failed product detail request', async () => {
       if (url.pathname.endsWith('/categories'))
         return jsonResponse({ ...categoryPage, content: [] })
       if (url.pathname.endsWith('/brands'))
-        return jsonResponse({ content: [], page: 0, size: 50, totalElements: 0, totalPages: 0 })
+        return jsonResponse([])
       if (url.pathname.endsWith('/products/linen-shirt')) {
         detailRequests += 1
         return detailRequests === 1
@@ -196,7 +188,7 @@ it('shows an empty search result and clears active search filters', async () => 
       if (url.pathname.endsWith('/categories'))
         return jsonResponse({ ...categoryPage, content: [] })
       if (url.pathname.endsWith('/brands'))
-        return jsonResponse({ content: [], page: 0, size: 50, totalElements: 0, totalPages: 0 })
+        return jsonResponse([])
       if (url.pathname.endsWith('/products'))
         return jsonResponse({ content: [], page: 0, size: 12, totalElements: 0, totalPages: 0 })
       return jsonResponse({ message: 'Unexpected endpoint' }, 404)
@@ -241,7 +233,7 @@ it('submits the selected quantity to the authenticated cart endpoint', async () 
         })
       if (url.pathname.endsWith('/categories')) return jsonResponse(categoryPage)
       if (url.pathname.endsWith('/brands'))
-        return jsonResponse({ content: [], page: 0, size: 50, totalElements: 0, totalPages: 0 })
+        return jsonResponse([])
       if (url.pathname.endsWith('/products/linen-shirt')) return jsonResponse(product)
       if (url.pathname.endsWith('/products')) return jsonResponse(productPage())
       if (url.pathname.endsWith('/customers/me/cart/items')) {
@@ -531,8 +523,8 @@ it('loads the server cart, updates quantity, preserves prices, and removes an it
   expect(await screen.findByRole('heading', { name: 'Linen Shirt' })).toBeVisible()
   expect(screen.getByText(/Unit price:.*1,299\.95/)).toBeVisible()
   expect(screen.getAllByText(/2,599\.9/)).toHaveLength(2)
-  expect(screen.getByRole('button', { name: 'Checkout unavailable' })).toBeDisabled()
-  expect(screen.getByText(/Checkout and order placement are not available yet/)).toBeVisible()
+  expect(screen.getByRole('link', { name: 'Proceed to checkout' })).toHaveAttribute('href', '/checkout')
+  expect(screen.getByText(/Review delivery details and current stock at checkout/)).toBeVisible()
 
   const quantity = screen.getByRole('spinbutton', { name: 'Quantity' })
   fireEvent.change(quantity, { target: { value: '3' } })
@@ -589,7 +581,7 @@ it('shows an unavailable product response instead of reporting add-to-cart succe
       if (url.pathname.endsWith('/auth/login')) return jsonResponse(customerLogin)
       if (url.pathname.endsWith('/categories')) return jsonResponse(categoryPage)
       if (url.pathname.endsWith('/brands'))
-        return jsonResponse({ content: [], page: 0, size: 50, totalElements: 0, totalPages: 0 })
+        return jsonResponse([])
       if (url.pathname.endsWith('/products/linen-shirt')) return jsonResponse(product)
       if (url.pathname.endsWith('/products')) return jsonResponse(productPage())
       if (url.pathname.endsWith('/customers/me/cart/items') && init?.method === 'POST')
@@ -665,4 +657,26 @@ it('shows duplicate-submission errors without claiming the application was recei
 
   expect(await screen.findByRole('alert')).toHaveTextContent('An open application already exists')
   expect(screen.queryByRole('status')).not.toBeInTheDocument()
+})
+
+it('loads a brand storefront using the backend array and brand-filtered products', async () => {
+  window.history.replaceState({}, '', '/brands/example-atelier')
+  const requests: URL[] = []
+  vi.stubGlobal('fetch', vi.fn(async (input: RequestInfo | URL) => {
+    const url = new URL(String(input))
+    requests.push(url)
+    if (url.pathname.endsWith('/brands')) return jsonResponse([{ id: 3, name: 'Example Atelier', slug: 'example-atelier' }])
+    if (url.pathname.endsWith('/products')) return jsonResponse({ ...productPage(), totalPages: 1 })
+    return jsonResponse({}, 404)
+  }))
+  render(<App />)
+  expect(await screen.findByRole('heading', { name: 'Example Atelier' })).toBeVisible()
+  expect(screen.getByRole('link', { name: /^Linen Shirt$/ })).toBeVisible()
+  expect(requests.some((url) => url.searchParams.get('brandId') === '3')).toBe(true)
+})
+it('shows a safe error for a missing or inactive brand storefront', async () => {
+  window.history.replaceState({}, '', '/brands/inactive-brand')
+  vi.stubGlobal('fetch', vi.fn().mockResolvedValue(jsonResponse([])))
+  render(<App />)
+  expect(await screen.findByRole('alert')).toHaveTextContent('This brand is no longer available.')
 })

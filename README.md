@@ -30,13 +30,15 @@ npm run build
 - `/` home and API-backed featured discovery
 - `/products` public catalogue with keyword, category and price sorting
 - `/products/:slug` public product detail
-- `/brands` active brand discovery; `/brands/:slug` is temporary because the backend has no brand detail endpoint
+- `/brands` active brand discovery; `/brands/:slug` resolves an active brand and its paginated API-backed catalogue
 - `/sign-in`, `/register` call the real email/password API
 - `/cart` uses authenticated customer cart endpoints
-- `/account`, `/account/addresses` show identity and saved addresses; profile/address editing is a later milestone
+- `/account` shows identity; `/account/addresses` manages saved addresses, default selection and delivery instructions
+- `/checkout` reviews a saved address, current stock and server prices, then places an unpaid COD order
+- `/orders` and `/orders/:id` show customer-owned order history and immutable delivery/item snapshots
 - `/about` and unmatched paths use explicit informational/not-found content
 
-Checkout is intentionally unavailable because no backend checkout contract exists. Product illustrations are CSS artwork, not product photos or actual inventory. Product names/prices come from API responses. Loading, empty and failure states are included.
+COD checkout is implemented against the real Spring backend when explicitly enabled by its environment. No online payment or cash collection occurs when placing an order. Product illustrations are CSS artwork, not product photos or actual inventory. Product names/prices come from API responses. Loading, empty and failure states are included.
 
 ## API and authentication
 
@@ -44,7 +46,7 @@ Checkout is intentionally unavailable because no backend checkout contract exist
 
 ## Release status
 
-The application uses real API calls for catalogue, identity, addresses and cart paths present in the backend contract. It has no live-data fallback; connection errors remain visible when the API is unavailable. Product artwork is CSS illustration. Checkout, orders and payments are not implemented. See the [F0.6 integration report](./docs/integration/F0.6-end-to-end-report.md) and [F0.7 readiness report](./docs/release/F0.7-release-readiness-report.md) for verified status.
+The application uses real API calls for catalogue, identity, addresses and cart paths present in the backend contract. It has no live-data fallback; connection errors remain visible when the API is unavailable. Product artwork is CSS illustration. COD orders, address management and stock revalidation are implemented. Payment gateways and fulfilment/status changes are not implemented. See the [F0.6 integration report](./docs/integration/F0.6-end-to-end-report.md) and [F0.7 readiness report](./docs/release/F0.7-release-readiness-report.md) for verified status.
 
 ## F0.1 notes
 
@@ -55,3 +57,7 @@ The visual system uses warm paper, botanical green and clay accents, editorial s
 See [F0.1-implementation-report.md](./F0.1-implementation-report.md) for verified scope, commands, test results and remaining blockers.
 
 See [QA-01 frontend verification](./docs/qa/QA-01-frontend-verification.md) for route, browser, accessibility and runtime checks.
+
+## Address and COD acceptance
+
+The owner-approved SRS addendum, checkout contract, verification report and manual guide are in the sibling backend repository under docs/requirements, docs/api/CHECKOUT-CONTRACT.md, docs/testing/ADDRESS-CHECKOUT-ACCEPTANCE.md and docs/testing/MANUAL-CHECKOUT-GUIDE.md. Pending submissions retain only their UUID, address ID and review token in sessionStorage; access tokens remain in memory. This supports safe retries after a response is lost. The verified local app is http://127.0.0.1:5176/ backed by MySQL on the dedicated acceptance stack.

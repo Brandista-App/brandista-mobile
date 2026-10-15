@@ -1,3 +1,4 @@
+import { AddressBook, Checkout, OrderDetails, Orders } from './checkout'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import type { FormEvent } from 'react'
 import {
@@ -158,6 +159,7 @@ function Header() {
           <NavLink to="/about" onClick={() => setOpen(false)}>
             Our story
           </NavLink>
+          {account && <NavLink to="/orders" onClick={() => setOpen(false)}>My orders</NavLink>}
           {account && (
             <button
               onClick={() => {
@@ -215,7 +217,7 @@ function Shell() {
           <Route path="/products/:slug" element={<ProductDetail />} />
           <Route path="/brands" element={<Brands />} />
           <Route path="/partners" element={<PartnerApplication />} />
-          <Route path="/brands/:slug" element={<Info title="This brand page is coming soon." />} />
+          <Route path="/brands/:slug" element={<BrandStorefront />} />
           <Route path="/sign-in" element={<Auth mode="sign-in" />} />
           <Route path="/register" element={<Auth mode="register" />} />
           <Route
@@ -238,12 +240,14 @@ function Shell() {
             path="/account/addresses"
             element={
               <ProtectedRoute>
-                <Account addresses />
+                <AddressBook />
               </ProtectedRoute>
             }
           />
           <Route path="/about" element={<Info title="Good things have good stories." />} />
-          <Route path="/checkout" element={<Navigate to="/cart" replace />} />
+          <Route path="/checkout" element={<ProtectedRoute><Checkout /></ProtectedRoute>} />
+<Route path="/orders" element={<ProtectedRoute><Orders /></ProtectedRoute>} />
+<Route path="/orders/:id" element={<ProtectedRoute><OrderDetails /></ProtectedRoute>} />
           <Route
             path="*"
             element={<Info title="We couldn’t find that page." label="404 · Not found" />}
@@ -736,7 +740,7 @@ function ProductDetail() {
           <p>
             {item.description || 'A thoughtful find from one of our independent Pakistani makers.'}
           </p>
-          <div className="available">
+          {item.stockQuantity !== undefined && <p>In stock: {item.stockQuantity}</p>}<div className="available">
             {item.availability === 'AVAILABLE'
               ? '● Available to discover'
               : '○ Currently unavailable'}
@@ -753,7 +757,7 @@ function ProductDetail() {
             />
           </label>
           <button
-            disabled={item.availability !== 'AVAILABLE' || !validQuantity || adding}
+            disabled={item.availability !== 'AVAILABLE' || item.stockQuantity === 0 || !validQuantity || adding}
             onClick={() => void add()}
             className="button"
           >
@@ -770,12 +774,54 @@ function ProductDetail() {
             </p>
           )}
           <small className="note">
-            Price and availability come from the catalogue. Checkout is not yet available.
+            Price and availability are rechecked when placing your order.
           </small>
         </div>
       </div>
     </section>
   )
+}
+function BrandStorefront() {
+  const { slug = '' } = useParams()
+  const [brand, setBrand] = useState<Brand | null>(null)
+  const [products, setProducts] = useState<Page<Product> | null>(null)
+  const [page, setPage] = useState(0)
+  const [retry, setRetry] = useState(0)
+  const [error, setError] = useState('')
+  useEffect(() => { setPage(0) }, [slug])
+  useEffect(() => {
+    let active = true
+    setBrand(null)
+    setProducts(null)
+    setError('')
+    async function load() {
+      try {
+        const found = (await discoverBrands()).content.find((item) => item.slug === slug)
+        if (!found) throw new Error('This brand is no longer available.')
+        const result = await discoverProducts(new URLSearchParams({ brandId: String(found.id), page: String(page), size: '12' }))
+        if (active) { setBrand(found); setProducts(result) }
+      } catch (cause) {
+        if (active) setError(cause instanceof Error ? cause.message : 'Could not load this brand.')
+      }
+    }
+    void load()
+    return () => { active = false }
+  }, [slug, page, retry])
+  return <section className="wrap page-space">
+    {error ? <Failure message={error} retry={() => setRetry((value) => value + 1)} />
+      : !brand || !products ? <Loading /> : <>
+        <div className="eyebrow">Independent label</div>
+        <h1 className="page-title">{brand.name}</h1>
+        <p className="intro">{brand.description}</p>
+        {products.content.length ? <div className="products">{products.content.map((product) => <ProductCard key={product.id} product={product} />)}</div>
+          : <Empty title="No finds from this maker yet" />}
+        {products.totalPages > 1 && <div className="pagination">
+          <button className="button outline small" disabled={page === 0} onClick={() => setPage((value) => value - 1)}>← Previous</button>
+          <span>Page {page + 1} of {products.totalPages}</span>
+          <button className="button outline small" disabled={page + 1 >= products.totalPages} onClick={() => setPage((value) => value + 1)}>Next →</button>
+        </div>}
+      </>}
+  </section>
 }
 function Brands() {
   const [brands, setBrands] = useState<Brand[] | null>(null)
@@ -1224,11 +1270,9 @@ function CartPage() {
             <span>Estimated subtotal</span>
             <b>{price(cart.subtotal, cart.currency)}</b>
             <p>
-              Cart totals come from the server. Checkout and order placement are not available yet.
+              Cart totals come from the server. Review delivery details and current stock at checkout.
             </p>
-            <button className="button" type="button" disabled aria-disabled="true">
-              Checkout unavailable
-            </button>
+            <Link className="button" to="/checkout">Proceed to checkout</Link>
           </div>
         </>
       ) : null}
@@ -1267,7 +1311,7 @@ function Account({ addresses = false }: { addresses?: boolean }) {
       <p className="intro">
         Your account is ready. More profile settings are coming in a later milestone.
       </p>
-      <div className="address-panel">
+      <div className="checkout-actions"><Link to="/account/addresses">Manage addresses</Link><Link to="/orders">My orders</Link></div><div className="address-panel">
         <h2>{addresses ? 'Delivery addresses' : 'Your delivery addresses'}</h2>
         {error ? (
           <Failure message={error} />
@@ -1292,7 +1336,7 @@ function Account({ addresses = false }: { addresses?: boolean }) {
           </ul>
         ) : (
           <Empty title="No saved addresses yet">
-            <p>Address editing is not available in this foundation.</p>
+            <Link className="button outline" to="/account/addresses">Add a delivery address</Link>
           </Empty>
         )}
       </div>
@@ -1340,7 +1384,7 @@ function PartnerApplication() {
       const details = fieldErrors.map((item) => item.field + ': ' + item.message).join('. ')
       setError(
         details
-          ? cause.message + ' ' + details
+          ? (cause instanceof Error ? cause.message : 'Invalid application.') + ' ' + details
           : cause instanceof Error
             ? cause.message
             : 'We could not submit your application. Please try again.',
