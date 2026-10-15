@@ -79,6 +79,7 @@ try:
         product = check(f'Brand admin {index} creates product', 201, 'POST', '/admin/products', token, product_data)
         check(f'Draft {index} hidden from customers', 404, 'GET', '/products/' + product['slug'])
         check(f'Brand admin {index} edits product', 200, 'PUT', f"/admin/products/{product['id']}", token, product_data)
+        check(f'Brand admin {index} configures stock', 200, 'PUT', f"/admin/products/{product['id']}/stock", token, {'stockQuantity': 10})
         check(f'Brand admin {index} publishes product', 200, 'PATCH', f"/admin/products/{product['id']}/publish", token)
         check(f'Published product {index} publicly discoverable', 200, 'GET', '/products/' + product['slug'])
         catalogue = check(f'Brand admin {index} catalogue scoped', 200, 'GET', '/admin/products', token)
@@ -95,6 +96,7 @@ try:
     check('Cross-brand product creation rejected', 403, 'POST', '/admin/products', own['token'],
           {**foreign['data'], 'slug': f'cross-{suffix}'})
     check('Cross-brand product update rejected', 403, 'PUT', f"/admin/products/{foreign['product']['id']}", own['token'], foreign['data'])
+    check('Cross-brand stock update rejected', 403, 'PUT', f"/admin/products/{foreign['product']['id']}/stock", own['token'], {'stockQuantity': 100})
     check('Product reassignment outside owned brands rejected', 403, 'PUT', f"/admin/products/{own['product']['id']}", own['token'],
           {**own['data'], 'brandId': foreign['brand']['id']})
     for action in ['publish', 'unpublish', 'deactivate']:
