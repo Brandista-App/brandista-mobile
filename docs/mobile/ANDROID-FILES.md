@@ -1,21 +1,15 @@
 # Native implementation file inventory
 
-Existing web application source and backend contracts are unchanged. Root README and tooling isolation are the only retained-web changes. Generated node_modules, dist, .expo, Android/iOS CNG outputs and local audit data are ignored.
+Existing web application source and backend contracts are unchanged. Root README and tooling isolation are the only retained-web changes. Generated dependencies, bundles, Expo state, native CNG output and local audit data are ignored.
 
 - `.github/workflows/android-quality.yml`
 - `README.md`
 - `apps/mobile/.env.example`
 - `apps/mobile/.gitignore`
 - `apps/mobile/AGENTS.md`
-- `apps/mobile/LICENSE`
 - `apps/mobile/README.md`
+- `apps/mobile/THIRD-PARTY-NOTICES.md`
 - `apps/mobile/app.config.ts`
-- `apps/mobile/assets/android-icon-background.png`
-- `apps/mobile/assets/android-icon-foreground.png`
-- `apps/mobile/assets/android-icon-monochrome.png`
-- `apps/mobile/assets/favicon.png`
-- `apps/mobile/assets/icon.png`
-- `apps/mobile/assets/splash-icon.png`
 - `apps/mobile/eas.json`
 - `apps/mobile/eslint.config.js`
 - `apps/mobile/jest.config.js`
@@ -64,6 +58,7 @@ Existing web application source and backend contracts are unchanged. Root README
 - `docs/mobile/ANDROID-API-MAPPING.md`
 - `docs/mobile/ANDROID-ARCHITECTURE.md`
 - `docs/mobile/ANDROID-BUILD-GUIDE.md`
+- `docs/mobile/ANDROID-CART-EVIDENCE.json`
 - `docs/mobile/ANDROID-FILES.md`
 - `docs/mobile/ANDROID-MANUAL-ACCEPTANCE.md`
 - `docs/mobile/ANDROID-TEST-REPORT.md`

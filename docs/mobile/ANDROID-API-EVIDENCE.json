@@ -20,10 +20,7 @@
   "customerId": 9,
   "orderId": 5,
   "total": 6000,
-  "brands": [
-    "DEMO Lahore Loom",
-    "DEMO Karachi Craft"
-  ],
+  "brands": ["DEMO Lahore Loom", "DEMO Karachi Craft"],
   "limits": [
     "Host-executed native API client; no emulator or physical device",
     "SecureStore device encryption not exercised by host-memory adapter",

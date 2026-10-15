@@ -51,6 +51,7 @@ jobs:
           distribution: temurin
           java-version: '21'
       - run: npm ci
+      - uses: android-actions/setup-android@v4
       - name: Provision Android compile platform
         run: sdkmanager 'platforms;android-37' 'build-tools;36.0.0'
       - run: npx expo prebuild --platform android --no-install
