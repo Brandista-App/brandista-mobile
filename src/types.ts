@@ -36,6 +36,7 @@ export type Product = {
   categoryName: string
   price: number
   currency: 'PKR'
+  stockQuantity?: number
   availability: 'AVAILABLE' | 'UNAVAILABLE'
 }
 export type Account = { id: number; email: string; role: 'CUSTOMER' | 'ADMIN' }
@@ -56,6 +57,8 @@ export type Address = {
   postalCode?: string | null
   createdAt: string
   updatedAt: string
+  deliveryInstructions?: string | null
+  isDefault?: boolean
 }
 export type CartItem = {
   itemId: number
