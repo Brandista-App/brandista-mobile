@@ -1,0 +1,45 @@
+{
+  "date": "2026-10-15T23:00:14.889Z",
+  "base": "http://127.0.0.1:8082/api/v1",
+  "checks": [
+    "Real customer registration",
+    "Real customer login",
+    "Session adapter restores token accepted by backend (host-memory adapter; not device Keystore)",
+    "Real product, brand and category discovery",
+    "Real product details",
+    "Products from two brands coexist in a server cart",
+    "Quantity changes and server-authoritative subtotal",
+    "Remove and re-add cart item",
+    "Address create, edit, list and default",
+    "COD review, placement, idempotent replay, unpaid status and cart clearing",
+    "Real order history and details",
+    "Address deletion preserves placed delivery snapshot",
+    "Logout denies protected calls; login restores customer order history",
+    "Explicit empty cart"
+  ],
+  "customerId": 9,
+  "orderId": 5,
+  "total": 6000,
+  "brands": [
+    "DEMO Lahore Loom",
+    "DEMO Karachi Craft"
+  ],
+  "limits": [
+    "Host-executed native API client; no emulator or physical device",
+    "SecureStore device encryption not exercised by host-memory adapter",
+    "Synthetic customer and unpaid COD order retained; demo stock decremented once per ordered quantity. No real payment."
+  ],
+  "stockVerification": {
+    "demo-m01-canvas-tote": {
+      "before": 19,
+      "after": 17,
+      "orderedQuantity": 2
+    },
+    "demo-m01-cotton-kurta": {
+      "before": 20,
+      "after": 19,
+      "orderedQuantity": 1
+    },
+    "method": "Anonymous catalogue stock re-read after same-key replay, compared to pre-run catalogue inspection."
+  }
+}

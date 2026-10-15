@@ -1,5 +1,9 @@
 # Brandista Mobile
 
+## Native Android workstream
+
+The Expo React Native application lives in [`apps/mobile`](apps/mobile). Its architecture, API mapping, tests and build instructions are in [`docs/mobile`](docs/mobile/ANDROID-ARCHITECTURE.md). The existing root React/Vite code is preserved for history; active web development continues in [brandista-frontend](https://github.com/Brandista-App/brandista-frontend). Run native npm commands from `apps/mobile`, not this root package.
+
 Customer-facing storefront for Brandista, a multi-brand shopping destination for independent Pakistani labels. No SRS file is available in the local repositories. The app follows the documented B0.14 backend contract where routes exist and labels unimplemented surfaces clearly.
 
 ## Stack
