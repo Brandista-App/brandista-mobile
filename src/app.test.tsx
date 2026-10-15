@@ -84,6 +84,24 @@ function jsonResponse(body: unknown, status = 200) {
   })
 }
 
+it('renders customer products and brand filters with the real backend brand-array contract', async () => {
+  window.history.replaceState({}, '', '/products')
+  vi.stubGlobal(
+    'fetch',
+    vi.fn(async (input: RequestInfo | URL) => {
+      const url = new URL(String(input))
+      if (url.pathname.endsWith('/brands'))
+        return jsonResponse([{ id: 3, name: 'Example Atelier', slug: 'example-atelier' }])
+      if (url.pathname.endsWith('/categories')) return jsonResponse(categoryPage)
+      return jsonResponse(productPage())
+    }),
+  )
+  render(<App />)
+  expect(await screen.findByRole('link', { name: 'Linen Shirt' })).toBeVisible()
+  expect(await screen.findByRole('option', { name: 'Example Atelier' })).toBeInTheDocument()
+  expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+})
+
 it('loads and filters the documented catalogue, paginates, and opens a product', async () => {
   const requests: URL[] = []
   vi.stubGlobal(
@@ -647,7 +665,9 @@ it('shows duplicate-submission errors without claiming the application was recei
   window.history.replaceState({}, '', '/partners')
   vi.stubGlobal(
     'fetch',
-    vi.fn(async () => jsonResponse({ message: 'An open application already exists for this contact email.' }, 409)),
+    vi.fn(async () =>
+      jsonResponse({ message: 'An open application already exists for this contact email.' }, 409),
+    ),
   )
   render(<App />)
   fireEvent.change(screen.getByLabelText(/Brand name/), { target: { value: 'Example Atelier' } })

@@ -1,0 +1,431 @@
+{
+  "timestampUtc": "2026-10-15T20:47:03.292557+00:00",
+  "checks": [
+    {
+      "check": "Login local-owner@brandista.local",
+      "expected": 200,
+      "actual": 200,
+      "result": "PASS"
+    },
+    {
+      "check": "Super admin lists managed accounts",
+      "expected": 200,
+      "actual": 200,
+      "result": "PASS"
+    },
+    {
+      "check": "Anonymous admin access denied",
+      "expected": 401,
+      "actual": 401,
+      "result": "PASS"
+    },
+    {
+      "check": "Last active super admin protected",
+      "expected": 409,
+      "actual": 409,
+      "result": "PASS"
+    },
+    {
+      "check": "Super admin creates another super admin",
+      "expected": 201,
+      "actual": 201,
+      "result": "PASS"
+    },
+    {
+      "check": "Login a02-second-5806490c@brandista.local",
+      "expected": 200,
+      "actual": 200,
+      "result": "PASS"
+    },
+    {
+      "check": "Second super admin has platform access",
+      "expected": 200,
+      "actual": 200,
+      "result": "PASS"
+    },
+    {
+      "check": "Disable additional super admin",
+      "expected": 200,
+      "actual": 200,
+      "result": "PASS"
+    },
+    {
+      "check": "Disabled super admin token rejected immediately",
+      "expected": 403,
+      "actual": 403,
+      "result": "PASS"
+    },
+    {
+      "check": "Create demo category",
+      "expected": 201,
+      "actual": 201,
+      "result": "PASS"
+    },
+    {
+      "check": "Create brand 1",
+      "expected": 201,
+      "actual": 201,
+      "result": "PASS"
+    },
+    {
+      "check": "Create assigned brand admin 1",
+      "expected": 201,
+      "actual": 201,
+      "result": "PASS"
+    },
+    {
+      "check": "Login a02-brand-1-5806490c@brandista.local",
+      "expected": 200,
+      "actual": 200,
+      "result": "PASS"
+    },
+    {
+      "check": "Brand admin 1 reads assignments",
+      "expected": 200,
+      "actual": 200,
+      "result": "PASS"
+    },
+    {
+      "check": "Brand admin 1 cannot create platform admin",
+      "expected": 403,
+      "actual": 403,
+      "result": "PASS"
+    },
+    {
+      "check": "Brand admin 1 cannot create brands",
+      "expected": 403,
+      "actual": 403,
+      "result": "PASS"
+    },
+    {
+      "check": "Brand admin 1 creates product",
+      "expected": 201,
+      "actual": 201,
+      "result": "PASS"
+    },
+    {
+      "check": "Draft 1 hidden from customers",
+      "expected": 404,
+      "actual": 404,
+      "result": "PASS"
+    },
+    {
+      "check": "Brand admin 1 edits product",
+      "expected": 200,
+      "actual": 200,
+      "result": "PASS"
+    },
+    {
+      "check": "Brand admin 1 publishes product",
+      "expected": 200,
+      "actual": 200,
+      "result": "PASS"
+    },
+    {
+      "check": "Published product 1 publicly discoverable",
+      "expected": 200,
+      "actual": 200,
+      "result": "PASS"
+    },
+    {
+      "check": "Brand admin 1 catalogue scoped",
+      "expected": 200,
+      "actual": 200,
+      "result": "PASS"
+    },
+    {
+      "check": "Create brand 2",
+      "expected": 201,
+      "actual": 201,
+      "result": "PASS"
+    },
+    {
+      "check": "Create assigned brand admin 2",
+      "expected": 201,
+      "actual": 201,
+      "result": "PASS"
+    },
+    {
+      "check": "Login a02-brand-2-5806490c@brandista.local",
+      "expected": 200,
+      "actual": 200,
+      "result": "PASS"
+    },
+    {
+      "check": "Brand admin 2 reads assignments",
+      "expected": 200,
+      "actual": 200,
+      "result": "PASS"
+    },
+    {
+      "check": "Brand admin 2 cannot create platform admin",
+      "expected": 403,
+      "actual": 403,
+      "result": "PASS"
+    },
+    {
+      "check": "Brand admin 2 cannot create brands",
+      "expected": 403,
+      "actual": 403,
+      "result": "PASS"
+    },
+    {
+      "check": "Brand admin 2 creates product",
+      "expected": 201,
+      "actual": 201,
+      "result": "PASS"
+    },
+    {
+      "check": "Draft 2 hidden from customers",
+      "expected": 404,
+      "actual": 404,
+      "result": "PASS"
+    },
+    {
+      "check": "Brand admin 2 edits product",
+      "expected": 200,
+      "actual": 200,
+      "result": "PASS"
+    },
+    {
+      "check": "Brand admin 2 publishes product",
+      "expected": 200,
+      "actual": 200,
+      "result": "PASS"
+    },
+    {
+      "check": "Published product 2 publicly discoverable",
+      "expected": 200,
+      "actual": 200,
+      "result": "PASS"
+    },
+    {
+      "check": "Brand admin 2 catalogue scoped",
+      "expected": 200,
+      "actual": 200,
+      "result": "PASS"
+    },
+    {
+      "check": "Create brand 3",
+      "expected": 201,
+      "actual": 201,
+      "result": "PASS"
+    },
+    {
+      "check": "Create assigned brand admin 3",
+      "expected": 201,
+      "actual": 201,
+      "result": "PASS"
+    },
+    {
+      "check": "Login a02-brand-3-5806490c@brandista.local",
+      "expected": 200,
+      "actual": 200,
+      "result": "PASS"
+    },
+    {
+      "check": "Brand admin 3 reads assignments",
+      "expected": 200,
+      "actual": 200,
+      "result": "PASS"
+    },
+    {
+      "check": "Brand admin 3 cannot create platform admin",
+      "expected": 403,
+      "actual": 403,
+      "result": "PASS"
+    },
+    {
+      "check": "Brand admin 3 cannot create brands",
+      "expected": 403,
+      "actual": 403,
+      "result": "PASS"
+    },
+    {
+      "check": "Brand admin 3 creates product",
+      "expected": 201,
+      "actual": 201,
+      "result": "PASS"
+    },
+    {
+      "check": "Draft 3 hidden from customers",
+      "expected": 404,
+      "actual": 404,
+      "result": "PASS"
+    },
+    {
+      "check": "Brand admin 3 edits product",
+      "expected": 200,
+      "actual": 200,
+      "result": "PASS"
+    },
+    {
+      "check": "Brand admin 3 publishes product",
+      "expected": 200,
+      "actual": 200,
+      "result": "PASS"
+    },
+    {
+      "check": "Published product 3 publicly discoverable",
+      "expected": 200,
+      "actual": 200,
+      "result": "PASS"
+    },
+    {
+      "check": "Brand admin 3 catalogue scoped",
+      "expected": 200,
+      "actual": 200,
+      "result": "PASS"
+    },
+    {
+      "check": "Cross-brand record read rejected",
+      "expected": 403,
+      "actual": 403,
+      "result": "PASS"
+    },
+    {
+      "check": "Cross-brand product read rejected",
+      "expected": 403,
+      "actual": 403,
+      "result": "PASS"
+    },
+    {
+      "check": "Cross-brand product creation rejected",
+      "expected": 403,
+      "actual": 403,
+      "result": "PASS"
+    },
+    {
+      "check": "Cross-brand product update rejected",
+      "expected": 403,
+      "actual": 403,
+      "result": "PASS"
+    },
+    {
+      "check": "Product reassignment outside owned brands rejected",
+      "expected": 403,
+      "actual": 403,
+      "result": "PASS"
+    },
+    {
+      "check": "Cross-brand publish rejected",
+      "expected": 403,
+      "actual": 403,
+      "result": "PASS"
+    },
+    {
+      "check": "Cross-brand unpublish rejected",
+      "expected": 403,
+      "actual": 403,
+      "result": "PASS"
+    },
+    {
+      "check": "Cross-brand deactivate rejected",
+      "expected": 403,
+      "actual": 403,
+      "result": "PASS"
+    },
+    {
+      "check": "Assignment changed by super admin",
+      "expected": 200,
+      "actual": 200,
+      "result": "PASS"
+    },
+    {
+      "check": "Old brand access revoked on existing token",
+      "expected": 403,
+      "actual": 403,
+      "result": "PASS"
+    },
+    {
+      "check": "Restore demo assignment",
+      "expected": 200,
+      "actual": 200,
+      "result": "PASS"
+    },
+    {
+      "check": "Disable brand admin",
+      "expected": 200,
+      "actual": 200,
+      "result": "PASS"
+    },
+    {
+      "check": "Disabled brand admin token rejected",
+      "expected": 403,
+      "actual": 403,
+      "result": "PASS"
+    },
+    {
+      "check": "Disabled brand admin login rejected",
+      "expected": 401,
+      "actual": 401,
+      "result": "PASS"
+    },
+    {
+      "check": "Restore demo brand admin",
+      "expected": 200,
+      "actual": 200,
+      "result": "PASS"
+    },
+    {
+      "check": "Public registration ignores requested elevated role",
+      "expected": 201,
+      "actual": 201,
+      "result": "PASS"
+    },
+    {
+      "check": "Login a02-customer-5806490c@brandista.local",
+      "expected": 200,
+      "actual": 200,
+      "result": "PASS"
+    },
+    {
+      "check": "Customer cannot access admin catalogue",
+      "expected": 403,
+      "actual": 403,
+      "result": "PASS"
+    },
+    {
+      "check": "Customer persistent cart still accessible",
+      "expected": 200,
+      "actual": 200,
+      "result": "PASS"
+    },
+    {
+      "check": "Customer sees Cedar Studio",
+      "expected": 200,
+      "actual": 200,
+      "result": "PASS"
+    },
+    {
+      "check": "Customer filtered discovery Cedar Studio",
+      "expected": 200,
+      "actual": 200,
+      "result": "PASS"
+    },
+    {
+      "check": "Customer sees Indigo Loom",
+      "expected": 200,
+      "actual": 200,
+      "result": "PASS"
+    },
+    {
+      "check": "Customer filtered discovery Indigo Loom",
+      "expected": 200,
+      "actual": 200,
+      "result": "PASS"
+    },
+    {
+      "check": "Customer sees Saffron Works",
+      "expected": 200,
+      "actual": 200,
+      "result": "PASS"
+    },
+    {
+      "check": "Customer filtered discovery Saffron Works",
+      "expected": 200,
+      "actual": 200,
+      "result": "PASS"
+    }
+  ]
+}

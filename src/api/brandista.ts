@@ -1,5 +1,15 @@
 import { apiRequest, jsonBody } from './client'
-import type { Address, Brand, BrandApplicationReceipt, BrandApplicationSubmission, Cart, Category, LoginResponse, Page, Product } from '../types'
+import type {
+  Address,
+  Brand,
+  BrandApplicationReceipt,
+  BrandApplicationSubmission,
+  Cart,
+  Category,
+  LoginResponse,
+  Page,
+  Product,
+} from '../types'
 export const discoverProducts = (params = new URLSearchParams()) =>
   apiRequest<Page<Product>>(`/products${params.size ? `?${params}` : ''}`)
 export const getProduct = (slug: string) =>

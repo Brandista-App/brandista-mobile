@@ -29,6 +29,7 @@ import {
 } from './api/brandista'
 import { ApiError } from './api/client'
 import { AuthProvider } from './auth'
+import { AdminDashboard, AdminLogin } from './admin'
 import { useAuth } from './auth-context'
 import type { Address, Brand, Cart, Category, Page, Product } from './types'
 
@@ -195,6 +196,7 @@ function Footer() {
         <div>
           <b>Your Brandista</b>
           <Link to="/sign-in">Sign in</Link>
+          <Link to="/admin/login">Administrator sign in</Link>
           <Link to="/account/addresses">Delivery addresses</Link>
           <Link to="/cart">Your bag</Link>
         </div>
@@ -212,6 +214,8 @@ function Shell() {
       <Header />
       <main id="main">
         <Routes>
+          <Route path="/admin/login" element={<AdminLogin />} />
+          <Route path="/admin" element={<AdminDashboard />} />
           <Route path="/" element={<Home />} />
           <Route path="/products" element={<Products />} />
           <Route path="/products/:slug" element={<ProductDetail />} />

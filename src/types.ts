@@ -39,7 +39,11 @@ export type Product = {
   stockQuantity?: number
   availability: 'AVAILABLE' | 'UNAVAILABLE'
 }
-export type Account = { id: number; email: string; role: 'CUSTOMER' | 'ADMIN' }
+export type Account = {
+  id: number
+  email: string
+  role: 'CUSTOMER' | 'ADMIN' | 'SUPER_ADMIN' | 'BRAND_ADMIN'
+}
 export type LoginResponse = {
   accessToken: string
   tokenType: 'Bearer'
