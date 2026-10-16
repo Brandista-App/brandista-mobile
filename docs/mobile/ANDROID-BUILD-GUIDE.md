@@ -60,3 +60,7 @@ No approved icon/splash artwork was found. Add approved owner-provided artwork a
 ## GitHub Actions development artifact
 
 The `Android native quality` workflow runs quality checks and then uses GitHub's hosted Android SDK to build an ARM64 debug APK. When the build succeeds, download the `brandista-android-debug-arm64` artifact from that workflow run; it contains `app-debug.apk`. It uses the standard development signing configuration and requires Metro for application JavaScript. This is an internal development artifact, not a release-signed store build, and does not prove device acceptance. Configure the API in the Metro environment for emulator versus phone as described above.
+
+## Compile-platform compatibility
+
+The app explicitly compiles and targets API 36, with build tools 37.0.0. React Native 0.88's AAR metadata sets minCompileSdk to 34; its framework build default of 37 does not require consuming apps to use unavailable platform 37. Expo build properties apply this override to the generated native project. CI provisions the same platform/build-tools pair.

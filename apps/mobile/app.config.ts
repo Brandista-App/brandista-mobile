@@ -43,7 +43,17 @@ const config: ExpoConfig = {
     'expo-router',
     ['expo-secure-store', { configureAndroidBackup: true }],
     ['expo-splash-screen', { backgroundColor: '#F7F3EB' }],
-    ['expo-build-properties', { android: { usesCleartextTraffic: development } }],
+    [
+      'expo-build-properties',
+      {
+        android: {
+          usesCleartextTraffic: development,
+          compileSdkVersion: 36,
+          targetSdkVersion: 36,
+          buildToolsVersion: '37.0.0',
+        },
+      },
+    ],
   ],
   experiments: { typedRoutes: true },
 }
