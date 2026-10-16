@@ -21,7 +21,7 @@ if os.environ.get('BACKEND_MODE') != 'internal-lan':
 match = re.search(r'networkSecurityConfig[^\n]*?@(0x[0-9a-fA-F]+)', manifest)
 assert match, 'Manifest has no network security config reference'
 resource_id = match.group(1).lower()
-resources = dump('resources', apk)
+resources = dump('--values', 'resources', apk)
 with zipfile.ZipFile(apk) as archive:
     entries = set(archive.namelist())
     candidates = set()
@@ -47,3 +47,4 @@ assert re.search(r'includeSubdomains[^\n]*0x0\b', policy), policy
 assert f'"{host}"' in policy, policy
 Path('network-security.txt').write_text(f'Manifest policy: {resource_id} -> {resource_path}\n' + policy)
 print(f'Verified manifest-referenced LAN policy: {host}; all other cleartext denied')
+

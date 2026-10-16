@@ -12,6 +12,10 @@ on:
         description: Real API URL ending in /api/v1 (private IPv4 HTTP permitted only for internal-lan)
         type: string
         required: false
+      existing_run_id:
+        description: Optional run ID containing a preserved signed APK (verification recovery only)
+        type: string
+        required: false
       backend_mode:
         description: Backend connection mode
         type: choice
@@ -19,6 +23,7 @@ on:
         default: https
 permissions:
   contents: read
+  actions: read
 jobs:
   quality:
     runs-on: ubuntu-latest
@@ -111,9 +116,21 @@ jobs:
           BACKEND_MODE: ${{ inputs.backend_mode }}
       - uses: android-actions/setup-android@v4
       - run: sdkmanager 'platforms;android-36' 'build-tools;37.0.0'
+      - name: Recover existing signed APK for verification
+        if: inputs.existing_run_id != ''
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SOURCE_RUN_ID: ${{ inputs.existing_run_id }}
+        run: |
+          set -euo pipefail
+          [[ "$SOURCE_RUN_ID" =~ ^[0-9]+$ ]]
+          gh run download "$SOURCE_RUN_ID" --repo Brandista-App/brandista-mobile --name brandista-internal-verification-diagnostics --dir .
+          gh api "repos/Brandista-App/brandista-mobile/actions/runs/$SOURCE_RUN_ID" --jq .head_sha > apk-source-sha.txt
       - run: npx expo prebuild --platform android --no-install
+        if: inputs.existing_run_id == ''
       - name: Build signed standalone release APK
         id: release-build
+        if: inputs.existing_run_id == ''
         env:
           KEYSTORE_BASE64: ${{ secrets.ANDROID_INTERNAL_KEYSTORE_BASE64 }}
           BRANDISTA_STORE_PASSWORD: ${{ secrets.ANDROID_INTERNAL_STORE_PASSWORD }}
@@ -139,6 +156,7 @@ jobs:
           unzip -p "$apk" assets/index.android.bundle > "$RUNNER_TEMP/brandista-bundle"
           grep -aFq "$EXPO_PUBLIC_API_BASE_URL" "$RUNNER_TEMP/brandista-bundle"
           "$ANDROID_HOME/build-tools/37.0.0/apksigner" verify --verbose --print-certs "$apk" | tee signing-report.txt
+          grep -Fq 'certificate SHA-256 digest: d75128ac92091d2b837368071d41f3a36c2036ecfa42409d06cdda0b7be4fa44' signing-report.txt
           "$ANDROID_HOME/build-tools/37.0.0/aapt" dump badging "$apk" > apk-metadata.txt
           if grep -q 'application-debuggable' apk-metadata.txt; then exit 1; fi
           if [ "$BACKEND_MODE" = internal-lan ]; then
@@ -150,7 +168,9 @@ jobs:
             python3 scripts/verify-apk-network.py "$apk"
           fi
           sha256sum "$apk" > apk-sha256.txt
-          printf 'Source: %s\nAPI: %s\nLAN reachability: requires local setup and phone verification\nDevice launch: not verified by this workflow\n' "$GITHUB_SHA" "$EXPO_PUBLIC_API_BASE_URL" > build-evidence.txt
+          APK_SOURCE_SHA="$GITHUB_SHA"
+          if [ -f apk-source-sha.txt ]; then APK_SOURCE_SHA=$(cat apk-source-sha.txt); fi
+          printf 'APK source: %s\nVerification source: %s\nAPI: %s\nLAN reachability: requires local setup and phone verification\nDevice launch: not verified by this workflow\n' "$APK_SOURCE_SHA" "$GITHUB_SHA" "$EXPO_PUBLIC_API_BASE_URL" > build-evidence.txt
       - uses: actions/upload-artifact@v7
         with:
           name: brandista-android-internal-signed-arm64
