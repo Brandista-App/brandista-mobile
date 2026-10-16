@@ -64,3 +64,5 @@ The `Android native quality` workflow runs quality checks and then uses GitHub's
 ## Compile-platform compatibility
 
 The app explicitly compiles and targets API 36, with build tools 37.0.0. React Native 0.88's AAR metadata sets minCompileSdk to 34; its framework build default of 37 does not require consuming apps to use unavailable platform 37. Expo build properties apply this override to the generated native project. CI provisions the same platform/build-tools pair.
+
+Expo SDK 58's published prebuilt AARs advertise minCompileSdk 37. Android autolinking therefore uses the documented `buildFromSource: [".*"]` setting to compile Expo modules against the app's API 36 configuration. This does not disable AAR compatibility validation or change the iOS build mode. Initial native builds take longer. See https://docs.expo.dev/guides/prebuilt-expo-modules/.
