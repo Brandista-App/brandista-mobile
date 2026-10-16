@@ -55,3 +55,11 @@ The quality job passed clean install, TypeScript, lint, 25 native tests and Andr
 The clean local `npm ci --no-audit --no-fund` passed (1,146 packages). A separate real API cart-only run passed nine checks with synthetic customer #10, including multi-brand quantity persistence through sign-out/re-login and cleanup. It placed no order and changed no inventory; see `ANDROID-CART-EVIDENCE.json`.
 
 Production and development Android manifests were generated and inspected. Release sets `usesCleartextTraffic=false`, removes overlay/vibration/camera/audio/external-storage permissions, and references SecureStore backup exclusions. Development permits cleartext for the emulator API and retains the development overlay permission. The release configuration inspection used an intentionally non-resolving example HTTPS URL, not a provisioned backend or release build. The generated project was then restored to development configuration. No device encryption/backup behavior is claimed from manifest inspection alone.
+
+## Final handoff
+
+Code and CI configuration are pushed on `codex/android-native-foundation`; review is open in draft PR #11. Final local verification after a clean install passed TypeScript, lint, all 25 native tests (7 suites, normal exit), and the Android Metro/Hermes export. Two CI quality jobs also passed those checks.
+
+The second hosted APK attempt failed at SDK provisioning: `platforms;android-37` was not found. SDK setup itself succeeded. React Native 0.88 declares compileSdk 37; the inspected Google repository metadata listed Android platform 36 but no platform 37. No unsupported compile-SDK downgrade was applied to hide this incompatibility. A compatible framework/platform combination must be established before APK generation can pass. **No APK was generated.** Failure evidence: https://github.com/Brandista-App/brandista-mobile/actions/runs/38823207398.
+
+The retained web suite is not green: one complete run passed 30/31 tests with a cart-request assertion failure; later retries also encountered worker-start timeouts. The root web production build and lint passed, and its application source, package manifest and lockfile are unchanged. These limitations, dependency advisories, approved artwork, signing and emulator/phone acceptance remain open for review. No public deployment or app-store submission occurred.
