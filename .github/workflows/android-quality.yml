@@ -3,6 +3,15 @@ on:
   pull_request:
     paths: ['apps/mobile/**', 'docs/mobile/**', '.github/workflows/android-quality.yml']
   workflow_dispatch:
+    inputs:
+      standalone:
+        description: Build signed standalone internal APK
+        type: boolean
+        default: false
+      api_base_url:
+        description: Reachable HTTPS API base URL ending in /api/v1
+        type: string
+        required: false
 permissions:
   contents: read
 jobs:
@@ -29,6 +38,7 @@ jobs:
       - run: npm test
       - run: npm run bundle:android
   debug-apk:
+    if: github.event_name != 'workflow_dispatch' || !inputs.standalone
     needs: quality
     runs-on: ubuntu-latest
     timeout-minutes: 45
@@ -62,4 +72,73 @@ jobs:
         with:
           name: brandista-android-debug-arm64
           path: apps/mobile/android/app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
+
+  standalone-apk:
+    if: github.event_name == 'workflow_dispatch' && inputs.standalone
+    needs: quality
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    defaults:
+      run:
+        working-directory: apps/mobile
+    env:
+      APP_VARIANT: production
+      BRANDISTA_INTERNAL_BUILD: '1'
+      EXPO_PUBLIC_API_BASE_URL: ${{ inputs.api_base_url }}
+      CI: '1'
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: apps/mobile/package-lock.json
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: '21'
+      - run: npm ci
+      - name: Verify reachable backend catalogue
+        run: npx tsx scripts/verify-release-backend.ts
+      - uses: android-actions/setup-android@v4
+      - run: sdkmanager 'platforms;android-36' 'build-tools;37.0.0'
+      - run: npx expo prebuild --platform android --no-install
+      - name: Build signed standalone release APK
+        env:
+          KEYSTORE_BASE64: ${{ secrets.ANDROID_INTERNAL_KEYSTORE_BASE64 }}
+          BRANDISTA_STORE_PASSWORD: ${{ secrets.ANDROID_INTERNAL_STORE_PASSWORD }}
+          BRANDISTA_KEY_PASSWORD: ${{ secrets.ANDROID_INTERNAL_KEY_PASSWORD }}
+          BRANDISTA_KEY_ALIAS: brandista-internal
+          BRANDISTA_KEYSTORE_PATH: ${{ runner.temp }}/brandista-internal.jks
+        run: |
+          set -euo pipefail
+          trap 'rm -f "$BRANDISTA_KEYSTORE_PATH"' EXIT
+          test -n "$KEYSTORE_BASE64"
+          umask 077
+          printf '%s' "$KEYSTORE_BASE64" | base64 --decode > "$BRANDISTA_KEYSTORE_PATH"
+          cd android
+          ./gradlew assembleRelease -PreactNativeArchitectures=arm64-v8a --no-daemon
+      - name: Verify embedded JavaScript and release signing
+        run: |
+          set -euo pipefail
+          apk=android/app/build/outputs/apk/release/app-release.apk
+          test -s "$apk"
+          unzip -l "$apk" | grep 'assets/index.android.bundle'
+          unzip -p "$apk" assets/index.android.bundle > "$RUNNER_TEMP/brandista-bundle"
+          grep -aFq "$EXPO_PUBLIC_API_BASE_URL" "$RUNNER_TEMP/brandista-bundle"
+          "$ANDROID_HOME/build-tools/37.0.0/apksigner" verify --verbose --print-certs "$apk" | tee signing-report.txt
+          "$ANDROID_HOME/build-tools/37.0.0/aapt" dump badging "$apk" > apk-metadata.txt
+          if grep -q 'application-debuggable' apk-metadata.txt; then exit 1; fi
+          sha256sum "$apk" > apk-sha256.txt
+          printf 'Source: %s\nAPI: %s\nDevice launch: not verified by this workflow\n' "$GITHUB_SHA" "$EXPO_PUBLIC_API_BASE_URL" > build-evidence.txt
+      - uses: actions/upload-artifact@v7
+        with:
+          name: brandista-android-internal-signed-arm64
+          path: |
+            apps/mobile/android/app/build/outputs/apk/release/app-release.apk
+            apps/mobile/signing-report.txt
+            apps/mobile/apk-metadata.txt
+            apps/mobile/apk-sha256.txt
+            apps/mobile/build-evidence.txt
           if-no-files-found: error

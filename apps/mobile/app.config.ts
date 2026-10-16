@@ -41,6 +41,7 @@ const config: ExpoConfig = {
   },
   plugins: [
     'expo-router',
+    './plugins-internal-signing.cjs',
     ['expo-secure-store', { configureAndroidBackup: true }],
     ['expo-splash-screen', { backgroundColor: '#F7F3EB' }],
     [
