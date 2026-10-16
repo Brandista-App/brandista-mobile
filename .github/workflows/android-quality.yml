@@ -113,6 +113,7 @@ jobs:
       - run: sdkmanager 'platforms;android-36' 'build-tools;37.0.0'
       - run: npx expo prebuild --platform android --no-install
       - name: Build signed standalone release APK
+        id: release-build
         env:
           KEYSTORE_BASE64: ${{ secrets.ANDROID_INTERNAL_KEYSTORE_BASE64 }}
           BRANDISTA_STORE_PASSWORD: ${{ secrets.ANDROID_INTERNAL_STORE_PASSWORD }}
@@ -142,12 +143,11 @@ jobs:
           if grep -q 'application-debuggable' apk-metadata.txt; then exit 1; fi
           if [ "$BACKEND_MODE" = internal-lan ]; then
             grep -q "package: name='com.brandista.mobile.internal'" apk-metadata.txt
-            "$ANDROID_HOME/build-tools/37.0.0/aapt" dump xmltree "$apk" res/xml/brandista_lan_network.xml > network-security.txt
-            API_HOST=$(node -p 'new URL(process.env.EXPO_PUBLIC_API_BASE_URL).hostname')
-            grep -Fq "$API_HOST" network-security.txt
+            python3 scripts/verify-apk-network.py "$apk"
+
           else
             grep -q "package: name='com.brandista.mobile'" apk-metadata.txt
-            printf 'Production HTTPS mode; no internal LAN policy\n' > network-security.txt
+            python3 scripts/verify-apk-network.py "$apk"
           fi
           sha256sum "$apk" > apk-sha256.txt
           printf 'Source: %s\nAPI: %s\nLAN reachability: requires local setup and phone verification\nDevice launch: not verified by this workflow\n' "$GITHUB_SHA" "$EXPO_PUBLIC_API_BASE_URL" > build-evidence.txt
@@ -161,4 +161,15 @@ jobs:
             apps/mobile/apk-sha256.txt
             apps/mobile/build-evidence.txt
             apps/mobile/network-security.txt
+          if-no-files-found: error
+      - name: Preserve built APK for diagnostics if verification fails
+        if: failure() && steps.release-build.outcome == 'success'
+        uses: actions/upload-artifact@v7
+        with:
+          name: brandista-internal-verification-diagnostics
+          retention-days: 3
+          path: |
+            apps/mobile/android/app/build/outputs/apk/release/app-release.apk
+            apps/mobile/signing-report.txt
+            apps/mobile/apk-metadata.txt
           if-no-files-found: error
