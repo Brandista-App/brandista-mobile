@@ -21,7 +21,18 @@ if (!(
   throw new Error('Only an RFC1918 private LAN address is permitted.')
 if (!Number.isInteger(port) || port < 1024 || port > 65535) throw new Error('Invalid proxy port')
 const server = http.createServer((request, response) => {
-  if (!(request.url === '/api/v1' || request.url.startsWith('/api/v1/'))) {
+  let target
+  try {
+    target = new URL(request.url, 'http://127.0.0.1:8082')
+  } catch {
+    response.writeHead(400).end()
+    return
+  }
+  if (
+    target.origin !== 'http://127.0.0.1:8082' ||
+    /%2f|%5c|%25/i.test(target.pathname) ||
+    !(target.pathname === '/api/v1' || target.pathname.startsWith('/api/v1/'))
+  ) {
     response.writeHead(404).end()
     return
   }
@@ -35,7 +46,7 @@ const server = http.createServer((request, response) => {
       hostname: '127.0.0.1',
       port: 8082,
       method: request.method,
-      path: request.url,
+      path: target.pathname + target.search,
       headers,
       timeout: 30000,
     },
