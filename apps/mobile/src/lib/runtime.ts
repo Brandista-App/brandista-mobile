@@ -15,7 +15,11 @@ export const setToken = (value: string | null) => {
 export const setExpiredHandler = (value: (token: string) => void) => {
   onExpired = value
 }
-export const base = apiBase(process.env.EXPO_PUBLIC_API_BASE_URL, __DEV__)
+export const base = apiBase(
+  process.env.EXPO_PUBLIC_API_BASE_URL,
+  __DEV__,
+  process.env.EXPO_PUBLIC_APP_VARIANT === 'internal-lan',
+)
 export const api = createApi(
   createClient(
     base,

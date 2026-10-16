@@ -9,9 +9,14 @@ on:
         type: boolean
         default: false
       api_base_url:
-        description: Reachable HTTPS API base URL ending in /api/v1
+        description: Real API URL ending in /api/v1 (private IPv4 HTTP permitted only for internal-lan)
         type: string
         required: false
+      backend_mode:
+        description: Backend connection mode
+        type: choice
+        options: [https, internal-lan]
+        default: https
 permissions:
   contents: read
 jobs:
@@ -83,7 +88,8 @@ jobs:
       run:
         working-directory: apps/mobile
     env:
-      APP_VARIANT: production
+      APP_VARIANT: ${{ inputs.backend_mode == 'internal-lan' && 'internal-lan' || 'production' }}
+      EXPO_PUBLIC_APP_VARIANT: ${{ inputs.backend_mode }}
       BRANDISTA_INTERNAL_BUILD: '1'
       EXPO_PUBLIC_API_BASE_URL: ${{ inputs.api_base_url }}
       CI: '1'
@@ -101,6 +107,8 @@ jobs:
       - run: npm ci
       - name: Verify reachable backend catalogue
         run: npx tsx scripts/verify-release-backend.ts
+        env:
+          BACKEND_MODE: ${{ inputs.backend_mode }}
       - uses: android-actions/setup-android@v4
       - run: sdkmanager 'platforms;android-36' 'build-tools;37.0.0'
       - run: npx expo prebuild --platform android --no-install
@@ -120,6 +128,8 @@ jobs:
           cd android
           ./gradlew assembleRelease -PreactNativeArchitectures=arm64-v8a --no-daemon
       - name: Verify embedded JavaScript and release signing
+        env:
+          BACKEND_MODE: ${{ inputs.backend_mode }}
         run: |
           set -euo pipefail
           apk=android/app/build/outputs/apk/release/app-release.apk
@@ -130,8 +140,17 @@ jobs:
           "$ANDROID_HOME/build-tools/37.0.0/apksigner" verify --verbose --print-certs "$apk" | tee signing-report.txt
           "$ANDROID_HOME/build-tools/37.0.0/aapt" dump badging "$apk" > apk-metadata.txt
           if grep -q 'application-debuggable' apk-metadata.txt; then exit 1; fi
+          if [ "$BACKEND_MODE" = internal-lan ]; then
+            grep -q "package: name='com.brandista.mobile.internal'" apk-metadata.txt
+            "$ANDROID_HOME/build-tools/37.0.0/aapt" dump xmltree "$apk" res/xml/brandista_lan_network.xml > network-security.txt
+            API_HOST=$(node -p 'new URL(process.env.EXPO_PUBLIC_API_BASE_URL).hostname')
+            grep -Fq "$API_HOST" network-security.txt
+          else
+            grep -q "package: name='com.brandista.mobile'" apk-metadata.txt
+            printf 'Production HTTPS mode; no internal LAN policy\n' > network-security.txt
+          fi
           sha256sum "$apk" > apk-sha256.txt
-          printf 'Source: %s\nAPI: %s\nDevice launch: not verified by this workflow\n' "$GITHUB_SHA" "$EXPO_PUBLIC_API_BASE_URL" > build-evidence.txt
+          printf 'Source: %s\nAPI: %s\nLAN reachability: requires local setup and phone verification\nDevice launch: not verified by this workflow\n' "$GITHUB_SHA" "$EXPO_PUBLIC_API_BASE_URL" > build-evidence.txt
       - uses: actions/upload-artifact@v7
         with:
           name: brandista-android-internal-signed-arm64
@@ -141,4 +160,5 @@ jobs:
             apps/mobile/apk-metadata.txt
             apps/mobile/apk-sha256.txt
             apps/mobile/build-evidence.txt
+            apps/mobile/network-security.txt
           if-no-files-found: error

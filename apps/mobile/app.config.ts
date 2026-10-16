@@ -1,23 +1,37 @@
 import type { ExpoConfig } from 'expo/config'
+const internalLan = process.env.APP_VARIANT === 'internal-lan'
+if (internalLan !== (process.env.EXPO_PUBLIC_APP_VARIANT === 'internal-lan'))
+  throw new Error('Internal LAN build flags must agree.')
 const development = process.env.APP_VARIANT === 'development'
 const base = process.env.EXPO_PUBLIC_API_BASE_URL
 const endpoint = base ? new URL(base) : undefined
 if (
   !development &&
   (!endpoint ||
-    endpoint.protocol !== 'https:' ||
+    (endpoint.protocol !== 'https:' && !(internalLan && endpoint.protocol === 'http:')) ||
     endpoint.username ||
     endpoint.password ||
     endpoint.search ||
     endpoint.hash ||
-    !endpoint.pathname.endsWith('/api/v1') ||
+    endpoint.pathname !== '/api/v1' ||
     /^(localhost|127\.|10\.0\.2\.2|\[::1\])/.test(endpoint.hostname))
 )
   throw new Error(
     'Release configuration requires EXPO_PUBLIC_API_BASE_URL using HTTPS. Set APP_VARIANT=development for local Android development.',
   )
+if (internalLan) {
+  const octets = endpoint!.hostname.split('.').map(Number)
+  const privateIp =
+    octets.length === 4 &&
+    octets.every((n) => Number.isInteger(n) && n >= 0 && n <= 255) &&
+    (octets[0] === 10 ||
+      (octets[0] === 172 && octets[1] >= 16 && octets[1] <= 31) ||
+      (octets[0] === 192 && octets[1] === 168))
+  if (!privateIp || endpoint!.pathname !== '/api/v1')
+    throw new Error('Internal LAN requires a private IPv4 /api/v1 endpoint.')
+}
 const config: ExpoConfig = {
-  name: development ? 'Brandista Dev' : 'Brandista',
+  name: internalLan ? 'Brandista LAN' : development ? 'Brandista Dev' : 'Brandista',
   slug: 'brandista-mobile',
   version: '0.1.0',
   scheme: 'brandista',
@@ -25,7 +39,11 @@ const config: ExpoConfig = {
   userInterfaceStyle: 'light',
   platforms: ['android', 'ios'],
   android: {
-    package: development ? 'com.brandista.mobile.dev' : 'com.brandista.mobile',
+    package: internalLan
+      ? 'com.brandista.mobile.internal'
+      : development
+        ? 'com.brandista.mobile.dev'
+        : 'com.brandista.mobile',
     versionCode: 1,
     permissions: [],
     blockedPermissions: [
@@ -42,6 +60,7 @@ const config: ExpoConfig = {
   plugins: [
     'expo-router',
     './plugins-internal-signing.cjs',
+    './plugins-lan-network.cjs',
     ['expo-secure-store', { configureAndroidBackup: true }],
     ['expo-splash-screen', { backgroundColor: '#F7F3EB' }],
     [

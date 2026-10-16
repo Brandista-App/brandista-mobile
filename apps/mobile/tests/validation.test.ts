@@ -31,3 +31,13 @@ test('release configuration requires HTTPS and rejects local defaults and creden
   expect(() => apiBase('https://u:p@example.com/api/v1', false)).toThrow()
   expect(apiBase('https://api.example.com/api/v1', false)).toBe('https://api.example.com/api/v1')
 })
+
+test('internal LAN release accepts only explicit private hosts while production stays HTTPS', () => {
+  expect(apiBase('http://192.168.100.66:8083/api/v1', false, true)).toBe(
+    'http://192.168.100.66:8083/api/v1',
+  )
+  for (const host of ['example.com', '8.8.8.8', '127.0.0.1', '10.0.2.2', '172.32.0.1'])
+    expect(() => apiBase(`http://${host}:8083/api/v1`, false, true)).toThrow()
+  expect(() => apiBase('http://192.168.100.66:8083/api/v1', false)).toThrow()
+  expect(() => apiBase('http://u:p@192.168.100.66:8083/api/v1', false, true)).toThrow()
+})
