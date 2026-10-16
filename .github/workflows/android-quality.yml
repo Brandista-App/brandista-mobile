@@ -1,0 +1,65 @@
+name: Android native quality
+on:
+  pull_request:
+    paths: ['apps/mobile/**', 'docs/mobile/**', '.github/workflows/android-quality.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  quality:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: apps/mobile
+    env:
+      APP_VARIANT: development
+      EXPO_PUBLIC_API_BASE_URL: http://10.0.2.2:8082/api/v1
+      CI: '1'
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: apps/mobile/package-lock.json
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm run lint
+      - run: npm test
+      - run: npm run bundle:android
+  debug-apk:
+    needs: quality
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    defaults:
+      run:
+        working-directory: apps/mobile
+    env:
+      APP_VARIANT: development
+      EXPO_PUBLIC_API_BASE_URL: http://10.0.2.2:8082/api/v1
+      CI: '1'
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: apps/mobile/package-lock.json
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: '21'
+      - run: npm ci
+      - uses: android-actions/setup-android@v4
+      - name: Provision Android compile platform
+        run: sdkmanager 'platforms;android-36' 'build-tools;37.0.0'
+      - run: npx expo prebuild --platform android --no-install
+      - name: Build standard development APK
+        run: ./gradlew assembleDebug -PreactNativeArchitectures=arm64-v8a --no-daemon
+        working-directory: apps/mobile/android
+      - uses: actions/upload-artifact@v7
+        with:
+          name: brandista-android-debug-arm64
+          path: apps/mobile/android/app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
