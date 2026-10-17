@@ -1,6 +1,8 @@
 # Brandista Mobile
 
-## Native Android workstream
+## Native Android and iOS workstreams
+
+The shared Expo package remains in `apps/mobile`. See [REPO-003 architecture and IOS-001 preparation](docs/mobile/REPO-003-MOBILE-ARCHITECTURE.md) for platform ownership, preservation boundaries, and independent build planning. Root `android/` and `ios/` applications have not been created; Uzair's unpublished Android source must be reviewed before any import.
 
 The Expo React Native application lives in [`apps/mobile`](apps/mobile). Its architecture, API mapping, tests and build instructions are in [`docs/mobile`](docs/mobile/ANDROID-ARCHITECTURE.md). The existing root React/Vite code is preserved for history; active web development continues in [brandista-frontend](https://github.com/Brandista-App/brandista-frontend). Run native npm commands from `apps/mobile`, not this root package.
 
