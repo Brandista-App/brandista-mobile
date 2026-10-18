@@ -33,6 +33,11 @@ yarn-error.*
 # local env files
 .env*.local
 
+# Safe iOS templates only; actual environment files remain ignored.
+!.env.ios.example
+!.env.ios.staging.example
+!.env.ios.production.example
+
 # typescript
 *.tsbuildinfo
 

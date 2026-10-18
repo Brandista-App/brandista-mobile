@@ -3,7 +3,8 @@ import { QueryClientProvider } from '@tanstack/react-query'
 import { SafeAreaProvider } from 'react-native-safe-area-context'
 import { StatusBar } from 'expo-status-bar'
 import { AuthProvider, useAuth } from '../state/auth'
-import { queryClient } from '../lib/runtime'
+import { queryClient, configurationError } from '../lib/runtime'
+import { SetupScreen } from '../ui/setup'
 import { Button, Loading, Screen, ErrorMessage } from '../ui/components'
 import { theme } from '../ui/theme'
 function Navigation() {
@@ -41,11 +42,15 @@ function Navigation() {
 export default function Layout() {
   return (
     <SafeAreaProvider>
-      <QueryClientProvider client={queryClient}>
-        <AuthProvider>
-          <Navigation />
-        </AuthProvider>
-      </QueryClientProvider>
+      {configurationError ? (
+        <SetupScreen />
+      ) : (
+        <QueryClientProvider client={queryClient}>
+          <AuthProvider>
+            <Navigation />
+          </AuthProvider>
+        </QueryClientProvider>
+      )}
     </SafeAreaProvider>
   )
 }

@@ -1,20 +1,71 @@
 {
-  "cli": { "version": ">= 16.0.0", "appVersionSource": "local" },
+  "cli": {
+    "version": ">= 16.0.0",
+    "appVersionSource": "local"
+  },
   "build": {
     "development": {
       "developmentClient": true,
       "distribution": "internal",
-      "android": { "buildType": "apk" },
-      "env": { "APP_VARIANT": "development" }
+      "android": {
+        "buildType": "apk"
+      },
+      "env": {
+        "APP_VARIANT": "development"
+      }
     },
     "preview": {
       "distribution": "internal",
-      "android": { "buildType": "apk" },
-      "env": { "APP_VARIANT": "production" }
+      "android": {
+        "buildType": "apk"
+      },
+      "env": {
+        "APP_VARIANT": "production"
+      }
     },
     "production": {
-      "android": { "buildType": "app-bundle" },
-      "env": { "APP_VARIANT": "production" }
+      "android": {
+        "buildType": "app-bundle"
+      },
+      "env": {
+        "APP_VARIANT": "production"
+      }
+    },
+    "ios-development": {
+      "developmentClient": true,
+      "distribution": "internal",
+      "environment": "development",
+      "ios": {
+        "simulator": false
+      },
+      "env": {
+        "APP_VARIANT": "development",
+        "EXPO_PUBLIC_APP_ENV": "development",
+        "IOS_BUILD": "1"
+      }
+    },
+    "ios-staging": {
+      "distribution": "internal",
+      "environment": "preview",
+      "ios": {
+        "simulator": false
+      },
+      "env": {
+        "APP_VARIANT": "production",
+        "EXPO_PUBLIC_APP_ENV": "staging",
+        "IOS_BUILD": "1"
+      }
+    },
+    "ios-production": {
+      "environment": "production",
+      "ios": {
+        "simulator": false
+      },
+      "env": {
+        "APP_VARIANT": "production",
+        "EXPO_PUBLIC_APP_ENV": "production",
+        "IOS_BUILD": "1"
+      }
     }
   }
 }
