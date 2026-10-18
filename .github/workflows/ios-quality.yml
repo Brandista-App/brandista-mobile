@@ -5,6 +5,7 @@ on:
       - 'apps/mobile/**'
       - 'apps/brand-assets/**'
       - 'docs/mobile/IOS-001*'
+      - 'docs/mobile/IOS-002*'
       - '.github/workflows/ios-quality.yml'
   workflow_dispatch:
 permissions:
