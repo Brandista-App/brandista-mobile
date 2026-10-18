@@ -1,7 +1,8 @@
 import * as SecureStore from 'expo-secure-store'
 import { QueryClient } from '@tanstack/react-query'
-import { apiBase } from './config'
-import { createClient } from './client'
+import { Platform } from 'react-native'
+import { resolveApiConfig } from './config'
+import { createClient, type Request } from './client'
 import { createApi } from './api'
 import { createSessionStore } from './session'
 export const queryClient = new QueryClient({
@@ -15,18 +16,23 @@ export const setToken = (value: string | null) => {
 export const setExpiredHandler = (value: (token: string) => void) => {
   onExpired = value
 }
-export const base = apiBase(
+const configuration = resolveApiConfig(
   process.env.EXPO_PUBLIC_API_BASE_URL,
   __DEV__,
   process.env.EXPO_PUBLIC_APP_VARIANT === 'internal-lan',
+  Platform.OS,
+  process.env.EXPO_PUBLIC_APP_ENV,
 )
-export const api = createApi(
-  createClient(
-    base,
-    () => token,
-    (sent) => onExpired(sent),
-  ),
+export const base = configuration.base
+export const configurationError = configuration.error
+const request = createClient(
+  base,
+  () => token,
+  (sent) => onExpired(sent),
 )
+const configuredRequest: Request = (path, options) =>
+  configurationError ? Promise.reject(configurationError) : request(path, options)
+export const api = createApi(configuredRequest)
 const namespace = base.replace(/[^a-zA-Z0-9._-]/g, '_')
 export const secureOptions: SecureStore.SecureStoreOptions = {
   keychainAccessible: SecureStore.WHEN_UNLOCKED_THIS_DEVICE_ONLY,

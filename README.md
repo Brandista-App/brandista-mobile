@@ -4,6 +4,8 @@
 
 The shared Expo package remains in `apps/mobile`. See [REPO-003 architecture and IOS-001 preparation](docs/mobile/REPO-003-MOBILE-ARCHITECTURE.md) for platform ownership, preservation boundaries, and independent build planning. Root `android/` and `ios/` applications have not been created; Uzair's unpublished Android source must be reviewed before any import.
 
+The [IOS-001 Windows/iPhone guide](docs/mobile/IOS-001-IPHONE-GUIDE.md) covers the reused app, setup screen, HTTPS environment configuration, iOS CI and EAS development profiles. Account enrollment, approved identifiers, signing, backend reachability and physical iPhone acceptance remain prerequisites; no native iPhone build is claimed.
+
 The Expo React Native application lives in [`apps/mobile`](apps/mobile). Its architecture, API mapping, tests and build instructions are in [`docs/mobile`](docs/mobile/ANDROID-ARCHITECTURE.md). The existing root React/Vite code is preserved for history; active web development continues in [brandista-frontend](https://github.com/Brandista-App/brandista-frontend). Run native npm commands from `apps/mobile`, not this root package.
 
 Customer-facing storefront for Brandista, a multi-brand shopping destination for independent Pakistani labels. No SRS file is available in the local repositories. The app follows the documented B0.14 backend contract where routes exist and labels unimplemented surfaces clearly.

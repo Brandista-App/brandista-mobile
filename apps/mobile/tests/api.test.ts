@@ -2,6 +2,59 @@ import { createClient, ApiError } from '../src/lib/client'
 import { createApi } from '../src/lib/api'
 const response = (status: number, body: unknown) =>
   ({ status, ok: status >= 200 && status < 300, json: async () => body }) as Response
+
+test('customer identity and checkout adapters follow inspected Spring contracts without invented profile endpoints', async () => {
+  const transport = jest.fn().mockResolvedValue(response(200, {}))
+  const api = createApi(
+    createClient(
+      'https://api.example.invalid/api/v1',
+      () => 'test-token',
+      () => {},
+      transport,
+    ),
+  )
+  await api.register('buyer@example.invalid', 'test-password-only')
+  await api.login('buyer@example.invalid', 'test-password-only')
+  await api.saveAddress({
+    recipientName: 'Test',
+    phoneNumber: '+923001234567',
+    addressLine1: 'Test',
+    city: 'Lahore',
+    province: 'Punjab',
+  })
+  await api.review(12)
+  await api.order('7')
+  const requests = transport.mock.calls.map(([url, options]) => ({
+    path: new URL(url).pathname,
+    method: options.method || 'GET',
+    body: options.body ? JSON.parse(options.body) : undefined,
+  }))
+  expect(requests).toEqual([
+    {
+      path: '/api/v1/registrations',
+      method: 'POST',
+      body: { email: 'buyer@example.invalid', password: 'test-password-only' },
+    },
+    {
+      path: '/api/v1/auth/login',
+      method: 'POST',
+      body: { email: 'buyer@example.invalid', password: 'test-password-only' },
+    },
+    {
+      path: '/api/v1/customers/me/addresses',
+      method: 'POST',
+      body: {
+        recipientName: 'Test',
+        phoneNumber: '+923001234567',
+        addressLine1: 'Test',
+        city: 'Lahore',
+        province: 'Punjab',
+      },
+    },
+    { path: '/api/v1/customers/me/checkout/preview', method: 'POST', body: { addressId: 12 } },
+    { path: '/api/v1/customers/me/orders/7', method: 'GET', body: undefined },
+  ])
+})
 test('cart mutation sends product/quantity only and authenticates', async () => {
   const transport = jest
     .fn()
