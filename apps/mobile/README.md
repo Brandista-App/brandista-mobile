@@ -2,6 +2,8 @@
 
 Expo React Native/TypeScript customer application. Native screens use existing Spring APIs; the root Vite source remains preserved and the active web repository is `brandista-frontend`.
 
+This existing package is also the iOS foundation. See [REPO-003 and IOS-001](../../docs/mobile/REPO-003-MOBILE-ARCHITECTURE.md) before creating platform folders or changing build configuration. iOS is declared in app configuration; native build/device readiness remains unverified. The default `10.0.2.2` API host is for Android emulators; iOS needs an explicitly configured reachable endpoint.
+
 ```powershell
 npm ci
 Copy-Item .env.example .env.local
