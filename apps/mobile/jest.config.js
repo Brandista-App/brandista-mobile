@@ -1,5 +1,21 @@
+// Preserve environment reads in tests that deliberately mutate configuration.
+// Retain Expo's transformer/options; override only its test caller's inline flag.
+const expoPreset = require('jest-expo/jest-preset')
+const scriptTransform = '\\.[jt]sx?$'
+const [babelJest, babelOptions] = expoPreset.transform[scriptTransform]
+
 module.exports = {
   preset: 'jest-expo',
+  transform: {
+    ...expoPreset.transform,
+    [scriptTransform]: [
+      babelJest,
+      {
+        ...babelOptions,
+        caller: { ...babelOptions.caller, preserveEnvVars: true },
+      },
+    ],
+  },
   testTimeout: 15000,
   // Resolve the core bundled by Expo, whether npm hoists it or nests it.
   moduleNameMapper: {
