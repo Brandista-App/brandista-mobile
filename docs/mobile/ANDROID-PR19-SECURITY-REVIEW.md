@@ -1,6 +1,6 @@
-# PR19 security review — proposed temporary exception
+# PR19 security review — recorded temporary acceptance
 
-Review date: **2026-10-22 (Asia/Karachi)**. Decision: **PENDING HUMAN REVIEW; no risk has been accepted**. Proposed expiry: **2026-11-05**, or an earlier reassessment trigger below. A named repository/security owner must record approval or rejection for each finding and confirm the safeguards before relying on this proposal. Expiry requires renewed review, not automatic extension.
+Review date: **2026-10-22 (Asia/Karachi)**. Decision: **HUMAN ACCEPTANCE RECORDED for development and internal testing only**. Accountable owner: **UzairBrandista**. Reviewed commit: **2de085535b4448307bdc63922e471cd952bf3620**. Exception expiry: **2026-11-05**, or an earlier reassessment trigger below. Expiry requires renewed review, not automatic extension. This record documents the human decision supplied in the project chat; it is not a GitHub approval review or authorization to merge.
 
 ## Scope and evidence
 
@@ -52,9 +52,17 @@ Installed **1.0.3**, `node_modules/sprintf-js`. Confirmed path: `jest@30.5.2 →
 
 Existing mitigations: fixed repository test commands and locked tooling tree. Required controls: review CLI/help/coverage templates; do not insert remote/customer input into format strings; keep PR jobs unprivileged and cancel abusive runs. LOW residual risk follows from bounded tooling availability impact and the absence of an identified runtime path.
 
-## Proposed acceptance boundary and human decision
+## Acceptance boundary and human decision
 
-All three findings can reasonably be considered for **temporary development and internal testing only**, conditional on the safeguards above. This document neither approves the exception nor authorizes merge. A human owner must decide separately for each row: approve the temporary exception with a named accountable owner and expiry, or reject it. They must confirm trusted inputs/network access and CI restrictions actually hold; absent that confirmation, keep the PR pending.
+UzairBrandista explicitly confirmed review of this document at commit `2de0855`, verified that the documented safeguards are in place, and supplied these decisions in the project chat:
+
+| Finding          | Human decision     | Residual risk |
+| ---------------- | ------------------ | ------------- |
+| braces 3.0.3     | ACCEPT TEMPORARILY | LOW           |
+| node-forge 1.4.0 | ACCEPT TEMPORARILY | MEDIUM        |
+| sprintf-js 1.0.3 | ACCEPT TEMPORARILY | LOW           |
+
+Acceptance is limited to **development and internal testing only**, under the documented controls, with UzairBrandista accountable until November 5, 2026 or earlier reassessment. Safeguard verification is the human reviewer's attestation, not a new independent technical verification by this documentation commit. Any material exposure change or compatible upstream fix triggers reassessment. This acceptance does not authorize merge, production deployment, store submission or release signing. Production requires a separate security review and physical-device acceptance.
 
 Internal testing must use synthetic data, restricted distribution and the existing nonproduction environment. No public deployment, store submission, production credentials, external signing trust service or production workload is covered. **Production release requires a separate security decision**, including current dependency findings, signed-artifact/native update verification and device acceptance.
 
