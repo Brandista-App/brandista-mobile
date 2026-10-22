@@ -2,6 +2,12 @@ import assert from 'node:assert/strict'
 import { apiBase } from '../src/lib/config'
 
 async function main() {
+  if (process.env.BACKEND_MODE === 'placeholder') {
+    assert.equal(process.env.APP_VARIANT, 'internal')
+    assert.equal(process.env.EXPO_PUBLIC_API_BASE_URL, 'https://backend-not-configured.invalid/api/v1')
+    console.log('NONFUNCTIONAL placeholder: shopping tests require an approved HTTPS backend and rebuild.')
+    return
+  }
   const lan = process.env.BACKEND_MODE === 'internal-lan'
   const base = apiBase(process.env.EXPO_PUBLIC_API_BASE_URL, false, lan)
   if (lan) {

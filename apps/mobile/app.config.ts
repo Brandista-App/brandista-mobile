@@ -1,5 +1,6 @@
 import type { ExpoConfig } from 'expo/config'
 const internalLan = process.env.APP_VARIANT === 'internal-lan'
+const internal = process.env.APP_VARIANT === 'internal' || internalLan
 if (internalLan !== (process.env.EXPO_PUBLIC_APP_VARIANT === 'internal-lan'))
   throw new Error('Internal LAN build flags must agree.')
 const development = process.env.APP_VARIANT === 'development'
@@ -57,7 +58,7 @@ if (internalLan) {
     throw new Error('Internal LAN requires a private IPv4 /api/v1 endpoint.')
 }
 const config: ExpoConfig = {
-  name: internalLan ? 'Brandista LAN' : development ? 'Brandista Dev' : 'Brandista',
+  name: internalLan ? 'Brandista LAN' : internal ? 'Brandista Internal' : development ? 'Brandista Dev' : 'Brandista',
   slug: 'brandista-mobile',
   version: '0.1.0',
   scheme: 'brandista',
@@ -67,7 +68,7 @@ const config: ExpoConfig = {
   ...(iosBundleIdentifier ? { ios: { bundleIdentifier: iosBundleIdentifier } } : {}),
   ...(easProjectId ? { extra: { eas: { projectId: easProjectId } } } : {}),
   android: {
-    package: internalLan
+    package: internal
       ? 'com.brandista.mobile.internal'
       : development
         ? 'com.brandista.mobile.dev'
