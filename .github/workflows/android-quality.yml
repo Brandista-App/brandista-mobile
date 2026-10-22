@@ -50,6 +50,14 @@ jobs:
   debug-apk:
     if: github.event_name != 'workflow_dispatch' || !inputs.standalone
     needs: quality
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - abi: arm64-v8a
+            artifact: brandista-android-debug-arm64
+          - abi: armeabi-v7a
+            artifact: brandista-android-debug-armv7
     runs-on: ubuntu-latest
     timeout-minutes: 45
     defaults:
@@ -76,12 +84,37 @@ jobs:
         run: sdkmanager 'platforms;android-36' 'build-tools;37.0.0'
       - run: npx expo prebuild --platform android --no-install
       - name: Build standard development APK
-        run: ./gradlew assembleDebug -PreactNativeArchitectures=arm64-v8a --no-daemon
+        run: ./gradlew assembleDebug -PreactNativeArchitectures=${{ matrix.abi }} --no-daemon
         working-directory: apps/mobile/android
+      - name: Verify packaged native architecture
+        env:
+          EXPECTED_ABI: ${{ matrix.abi }}
+        run: |
+          python3 - <<'PY'
+          import hashlib, os, pathlib, struct, zipfile
+          apk = pathlib.Path('android/app/build/outputs/apk/debug/app-debug.apk')
+          abi = os.environ['EXPECTED_ABI']
+          elf_class, machine = {'armeabi-v7a': (1, 40), 'arm64-v8a': (2, 183)}[abi]
+          with zipfile.ZipFile(apk) as archive:
+              libs = sorted(n for n in archive.namelist() if n.startswith('lib/') and n.endswith('.so'))
+              assert libs and {n.split('/')[1] for n in libs} == {abi}, libs
+              names = {n.split('/')[-1] for n in libs}
+              assert {'libreactnative.so', 'libhermesvm.so', 'libexpo-modules-core.so'} <= names, names
+              for name in libs:
+                  data = archive.read(name)
+                  assert data[:4] == b'\x7fELF' and data[4] == elf_class and data[5] == 1, name
+                  assert struct.unpack_from('<H', data, 18)[0] == machine, name
+              apk.with_name('native-libraries.txt').write_text('\n'.join(libs) + '\n')
+          apk.with_name('apk-sha256.txt').write_text(hashlib.sha256(apk.read_bytes()).hexdigest() + '  app-debug.apk\n')
+          print(f'Verified {len(libs)} native libraries for {abi}')
+          PY
       - uses: actions/upload-artifact@v7
         with:
-          name: brandista-android-debug-arm64
-          path: apps/mobile/android/app/build/outputs/apk/debug/app-debug.apk
+          name: ${{ matrix.artifact }}
+          path: |
+            apps/mobile/android/app/build/outputs/apk/debug/app-debug.apk
+            apps/mobile/android/app/build/outputs/apk/debug/native-libraries.txt
+            apps/mobile/android/app/build/outputs/apk/debug/apk-sha256.txt
           if-no-files-found: error
 
   standalone-apk:
