@@ -22,7 +22,8 @@ test('pending request survives restart and stays scoped to the customer', async 
   expect(await createPendingStore(storage, 1).load()).toBeNull()
 })
 test('network/server/expired-session outcomes keep the retry; validation and stock conflicts need review', () => {
-  for (const code of [0, 401, 500, 503]) expect(uncertain(new ApiError(code, 'test'))).toBe(true)
+  for (const code of [0, 401, 408, 429, 500, 503])
+    expect(uncertain(new ApiError(code, 'test'))).toBe(true)
   for (const code of [400, 403, 404, 409]) expect(uncertain(new ApiError(code, 'test'))).toBe(false)
 })
 test('corrupt pending data blocks unsafe new placement', async () => {

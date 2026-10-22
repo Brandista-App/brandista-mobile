@@ -3,15 +3,19 @@ import SignIn from '../src/app/sign-in'
 import { useAuth } from '../src/state/auth'
 import { api } from '../src/lib/runtime'
 import { router } from 'expo-router'
+import { ApiError } from '../src/lib/client'
 jest.mock('../src/state/auth', () => ({ useAuth: jest.fn() }))
 jest.mock('../src/lib/runtime', () => ({ api: { register: jest.fn() } }))
 jest.mock('expo-router', () => ({ router: { replace: jest.fn() } }))
 beforeEach(() => jest.clearAllMocks())
-test('invalid native form stays on screen without authenticating', async () => {
-  const signIn = jest.fn()
-  jest
-    .mocked(useAuth)
-    .mockReturnValue({
+
+test.each([401, 503])(
+  'authentication HTTP %s remains visible and permits retry',
+  async (status) => {
+    const signIn = jest
+      .fn()
+      .mockRejectedValue(new ApiError(status, 'Synthetic authentication failure'))
+    jest.mocked(useAuth).mockReturnValue({
       signIn,
       notice: '',
       session: null,
@@ -19,6 +23,25 @@ test('invalid native form stays on screen without authenticating', async () => {
       signOut: jest.fn(),
       retryRestore: jest.fn(),
     })
+    await render(<SignIn />)
+    await fireEvent.changeText(screen.getByLabelText('Email'), 'test@example.invalid')
+    await fireEvent.changeText(screen.getByLabelText('Password'), 'test-password-only')
+    await fireEvent.press(screen.getByRole('button', { name: 'Sign in' }))
+    expect(await screen.findByText('Synthetic authentication failure')).toBeTruthy()
+    expect(screen.getByRole('button', { name: 'Sign in' })).toBeEnabled()
+    expect(router.replace).not.toHaveBeenCalled()
+  },
+)
+test('invalid native form stays on screen without authenticating', async () => {
+  const signIn = jest.fn()
+  jest.mocked(useAuth).mockReturnValue({
+    signIn,
+    notice: '',
+    session: null,
+    ready: true,
+    signOut: jest.fn(),
+    retryRestore: jest.fn(),
+  })
   await render(<SignIn />)
   await fireEvent.press(screen.getByRole('button', { name: 'Sign in' }))
   expect(screen.getByText('Enter a valid email.')).toBeTruthy()
@@ -27,16 +50,14 @@ test('invalid native form stays on screen without authenticating', async () => {
 })
 test('successful login calls real session interface and replaces account navigation', async () => {
   const signIn = jest.fn().mockResolvedValue(undefined)
-  jest
-    .mocked(useAuth)
-    .mockReturnValue({
-      signIn,
-      notice: '',
-      session: null,
-      ready: true,
-      signOut: jest.fn(),
-      retryRestore: jest.fn(),
-    })
+  jest.mocked(useAuth).mockReturnValue({
+    signIn,
+    notice: '',
+    session: null,
+    ready: true,
+    signOut: jest.fn(),
+    retryRestore: jest.fn(),
+  })
   await render(<SignIn />)
   await fireEvent.changeText(screen.getByLabelText('Email'), 'test@example.invalid')
   await fireEvent.changeText(screen.getByLabelText('Password'), 'test-password-only')
@@ -48,16 +69,14 @@ test('successful login calls real session interface and replaces account navigat
 })
 test('registration uses backend adapter and returns to login without fake authentication', async () => {
   const signIn = jest.fn()
-  jest
-    .mocked(useAuth)
-    .mockReturnValue({
-      signIn,
-      notice: '',
-      session: null,
-      ready: true,
-      signOut: jest.fn(),
-      retryRestore: jest.fn(),
-    })
+  jest.mocked(useAuth).mockReturnValue({
+    signIn,
+    notice: '',
+    session: null,
+    ready: true,
+    signOut: jest.fn(),
+    retryRestore: jest.fn(),
+  })
   jest.mocked(api.register).mockResolvedValue({ id: 1, email: 'test@example.invalid' })
   await render(<SignIn />)
   await fireEvent.press(screen.getByRole('button', { name: 'Create a customer account' }))

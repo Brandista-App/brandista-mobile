@@ -30,6 +30,8 @@ export function uncertain(error: unknown) {
   return (
     !(error instanceof ApiError) ||
     error.status === 0 ||
+    error.status === 408 ||
+    error.status === 429 ||
     error.status >= 500 ||
     error.status === 401
   )
