@@ -19,7 +19,7 @@ on:
       backend_mode:
         description: Backend connection mode
         type: choice
-        options: [https, internal-lan]
+        options: [https, internal-lan, placeholder]
         default: https
 permissions:
   contents: read
@@ -46,10 +46,20 @@ jobs:
       - run: npm run typecheck
       - run: npm run lint
       - run: npm test
+      - run: npm run dependencies:check
+      - run: npx expo-doctor
       - run: npm run bundle:android
   debug-apk:
     if: github.event_name != 'workflow_dispatch' || !inputs.standalone
     needs: quality
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - abi: arm64-v8a
+            artifact: brandista-android-debug-arm64
+          - abi: armeabi-v7a
+            artifact: brandista-android-debug-armv7
     runs-on: ubuntu-latest
     timeout-minutes: 45
     defaults:
@@ -76,12 +86,37 @@ jobs:
         run: sdkmanager 'platforms;android-36' 'build-tools;37.0.0'
       - run: npx expo prebuild --platform android --no-install
       - name: Build standard development APK
-        run: ./gradlew assembleDebug -PreactNativeArchitectures=arm64-v8a --no-daemon
+        run: ./gradlew assembleDebug -PreactNativeArchitectures=${{ matrix.abi }} --no-daemon
         working-directory: apps/mobile/android
+      - name: Verify packaged native architecture
+        env:
+          EXPECTED_ABI: ${{ matrix.abi }}
+        run: |
+          python3 - <<'PY'
+          import hashlib, os, pathlib, struct, zipfile
+          apk = pathlib.Path('android/app/build/outputs/apk/debug/app-debug.apk')
+          abi = os.environ['EXPECTED_ABI']
+          elf_class, machine = {'armeabi-v7a': (1, 40), 'arm64-v8a': (2, 183)}[abi]
+          with zipfile.ZipFile(apk) as archive:
+              libs = sorted(n for n in archive.namelist() if n.startswith('lib/') and n.endswith('.so'))
+              assert libs and {n.split('/')[1] for n in libs} == {abi}, libs
+              names = {n.split('/')[-1] for n in libs}
+              assert {'libreactnative.so', 'libhermesvm.so', 'libexpo-modules-core.so'} <= names, names
+              for name in libs:
+                  data = archive.read(name)
+                  assert data[:4] == b'\x7fELF' and data[4] == elf_class and data[5] == 1, name
+                  assert struct.unpack_from('<H', data, 18)[0] == machine, name
+              apk.with_name('native-libraries.txt').write_text('\n'.join(libs) + '\n')
+          apk.with_name('apk-sha256.txt').write_text(hashlib.sha256(apk.read_bytes()).hexdigest() + '  app-debug.apk\n')
+          print(f'Verified {len(libs)} native libraries for {abi}')
+          PY
       - uses: actions/upload-artifact@v7
         with:
-          name: brandista-android-debug-arm64
-          path: apps/mobile/android/app/build/outputs/apk/debug/app-debug.apk
+          name: ${{ matrix.artifact }}
+          path: |
+            apps/mobile/android/app/build/outputs/apk/debug/app-debug.apk
+            apps/mobile/android/app/build/outputs/apk/debug/native-libraries.txt
+            apps/mobile/android/app/build/outputs/apk/debug/apk-sha256.txt
           if-no-files-found: error
 
   standalone-apk:
@@ -93,10 +128,10 @@ jobs:
       run:
         working-directory: apps/mobile
     env:
-      APP_VARIANT: ${{ inputs.backend_mode == 'internal-lan' && 'internal-lan' || 'production' }}
+      APP_VARIANT: ${{ inputs.backend_mode == 'internal-lan' && 'internal-lan' || 'internal' }}
       EXPO_PUBLIC_APP_VARIANT: ${{ inputs.backend_mode }}
       BRANDISTA_INTERNAL_BUILD: '1'
-      EXPO_PUBLIC_API_BASE_URL: ${{ inputs.api_base_url }}
+      EXPO_PUBLIC_API_BASE_URL: ${{ inputs.backend_mode == 'placeholder' && 'https://backend-not-configured.invalid/api/v1' || inputs.api_base_url }}
       CI: '1'
     steps:
       - uses: actions/checkout@v7
@@ -144,7 +179,9 @@ jobs:
           umask 077
           printf '%s' "$KEYSTORE_BASE64" | base64 --decode > "$BRANDISTA_KEYSTORE_PATH"
           cd android
-          ./gradlew assembleRelease -PreactNativeArchitectures=arm64-v8a --no-daemon
+          ./gradlew assembleRelease -PreactNativeArchitectures=armeabi-v7a,arm64-v8a --no-daemon
+      - name: Verify both native architectures
+        run: python3 scripts/verify-internal-apk.py android/app/build/outputs/apk/release/app-release.apk
       - name: Verify embedded JavaScript and release signing
         env:
           BACKEND_MODE: ${{ inputs.backend_mode }}
@@ -164,7 +201,7 @@ jobs:
             python3 scripts/verify-apk-network.py "$apk"
 
           else
-            grep -q "package: name='com.brandista.mobile'" apk-metadata.txt
+            grep -q "package: name='com.brandista.mobile.internal'" apk-metadata.txt
             python3 scripts/verify-apk-network.py "$apk"
           fi
           sha256sum "$apk" > apk-sha256.txt
@@ -173,7 +210,8 @@ jobs:
           printf 'APK source: %s\nVerification source: %s\nAPI: %s\nLAN reachability: requires local setup and phone verification\nDevice launch: not verified by this workflow\n' "$APK_SOURCE_SHA" "$GITHUB_SHA" "$EXPO_PUBLIC_API_BASE_URL" > build-evidence.txt
       - uses: actions/upload-artifact@v7
         with:
-          name: brandista-android-internal-signed-arm64
+          name: brandista-android-internal-signed-universal
+          retention-days: 14
           path: |
             apps/mobile/android/app/build/outputs/apk/release/app-release.apk
             apps/mobile/signing-report.txt
@@ -181,6 +219,7 @@ jobs:
             apps/mobile/apk-sha256.txt
             apps/mobile/build-evidence.txt
             apps/mobile/network-security.txt
+            apps/mobile/native-libraries.json
           if-no-files-found: error
       - name: Preserve built APK for diagnostics if verification fails
         if: failure() && steps.release-build.outcome == 'success'
