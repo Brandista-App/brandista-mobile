@@ -87,6 +87,8 @@ const config: ExpoConfig = {
   },
   plugins: [
     'expo-router',
+    'expo-image',
+    'expo-status-bar',
     './plugins-internal-signing.cjs',
     './plugins-lan-network.cjs',
     ['expo-secure-store', { configureAndroidBackup: true }],
