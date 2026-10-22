@@ -69,10 +69,10 @@ function Contents() {
     lock.current = true
     setBusy(true)
     setError(null)
-    const attempt =
-      pending ??
-      newPending({ addressId: chosen!, quoteToken: review!.quoteToken }, Crypto.randomUUID)
     try {
+      const attempt =
+        pending ??
+        newPending({ addressId: chosen!, quoteToken: review!.quoteToken }, Crypto.randomUUID)
       await store.save(attempt)
       setPending(attempt)
       const order = await api.place(attempt.request, attempt.key)
