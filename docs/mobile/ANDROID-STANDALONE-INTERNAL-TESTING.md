@@ -35,3 +35,15 @@ Only existing ANDROID_INTERNAL_* secrets and alias brandista-internal are used i
 PR19 exception is restricted to development/internal testing and expires November 5, 2026; it does not authorize production release. Do not suppress advisories. Use synthetic data only; no privileged accounts, persistent database modifications, backend deployment, public tunnels or firewall changes.
 
 References: https://docs.expo.dev/versions/v58.0.0/ and https://docs.expo.dev/guides/local-app-production/
+
+## Verified AND-021 artifact — October 22, 2026
+
+Build source: 63f1489 (the subsequent evidence-only documentation commit does not change APK inputs). Hosted run: https://github.com/Brandista-App/brandista-mobile/actions/runs/39828605292 — SUCCESS. Native release compilation took 15m55s. Download: https://github.com/Brandista-App/brandista-mobile/actions/runs/39828605292/artifacts/12448208091 . The ZIP contains the APK at android/app/build/outputs/apk/release/app-release.apk plus verification reports at its root.
+
+APK: 47,045,104 bytes; SHA256 6490c7c091eacf9d9e5b0608fe26a5469239e760c7677d6111ee56de0ad1972b. Convenient local copy: D:\Brandista Workplace\AND-021-evidence\Brandista-AND-021-internal-universal.apk. Full evidence, hosted logs and APK inspection: D:\Brandista Workplace\AND-021-evidence.
+
+Actual APK inspection confirms com.brandista.mobile.internal, Android7/API24 minimum, target36, non-debuggable, cleartext disabled, 26 identical native-library names per ABI, correct ELF32 ARM / ELF64 AArch64, and a 2,212,880-byte Hermes application bundle containing the exact nonfunctional placeholder URL. Internal certificate verification passed APK Signature Scheme v2. Local APK hash equals CI's hash. Metro is not required at runtime; no live backend is configured.
+
+Validation passed locally and/or in CI: npm ci; TypeScript; ESLint; 36 Jest tests / 10 suites; Expo dependencies up to date; Expo Doctor 20/20; internal Expo config; Android CNG prebuild; Android Hermes export; workflow YAML parsing; universal assembleRelease; final aapt/apksigner/native/bundle/network checks. Both PR debug ABI builds also passed. npm reports the existing 48 advisories (18 moderate, 30 high); no suppression or dependency changes. Local checks were rerun successfully after an initial premature attempt during npm ci could not find the tools.
+
+Physical installation, launch and all shopping acceptance: NOT TESTED (no connected device/emulator). Exact owner next step: download/extract/install the universal APK on the Android11 ARMv7 phone and launch with Metro stopped; supply an explicitly approved phone-reachable nonproduction HTTPS /api/v1 endpoint to rebuild before registration/catalogue/checkout acceptance. Do not treat placeholder failures as live-backend test results.
