@@ -33,6 +33,26 @@ Audited mobile main e55c75d, backend 4c7d09c (V1–V14), admin contracts and mer
 
 Current-run validation and build links are recorded below after execution. Historical TEST-002 reports 190 backend tests, 65 mobile tests and real host-adapter/MySQL customer journeys; those are prior evidence, not a new physical-device PASS.
 
+## FINAL-001 validation
+
+| Check | Result |
+| --- | --- |
+| Mobile Jest | VERIFIED: 72 tests, 14 suites; offline startup, option/cart persistence, simulated checkout, unavailable/unconfigured live service and existing session/idempotency regression |
+| Mobile TypeScript and ESLint | VERIFIED: pass |
+| Expo SDK compatibility | VERIFIED: dependencies aligned; SDK58/RN0.88 retained |
+| Expo Doctor | VERIFIED: 20/20 |
+| Clean mobile installation / Android export | VERIFIED in hosted quality workflow; final build evidence follows |
+| Backend automated HTTP/integration tests | VERIFIED: 190 tests, no failures/errors/skips, Java21 |
+| Admin clean installation, typecheck, lint, tests, production build | VERIFIED: 148 tests, 5 suites; passes |
+| Customer web clean installation, lint, tests, production build | VERIFIED: 69 tests, 7 suites; passes |
+| Full / production npm security audit | Both fail: 5 high package entries, 0 critical; see FINAL-001-SECURITY.md |
+| Current public-backend end-to-end | BLOCKED: approved reachable environment absent |
+| Current physical Android / emulator startup and UI | NOT RUN: no connected device or installed Android SDK/emulator established on this host |
+
+Current backend tests verify customer auth, catalogue, cart, addresses/COD/history, ownership, privileged grant and brand-member boundaries, stock and fulfillment rules. This establishes automated integration coverage, not operational or real-device certification. General profile editing, live product variants and live product photography remain INCOMPLETE as described above.
+
+Local raw evidence is retained at `D:\Brandista Workplace\FINAL-001-evidence`; secrets and generated dependency/build directories are not committed. No backend/admin/customer web source changes were needed for this presentation candidate. Their working checkouts remain clean.
+
 ## Security and deployment gates
 
 Existing internal signing only; no production key, privileged account creation, public tunnel, paid deployment or Play publishing. Android permissions remain restricted; production HTTPS policy is preserved. No secrets are embedded. Backend deployment remains explicitly unavailable in the presentation build; the reserved `.invalid` sentinel is inherited build configuration and never contacted by the showcase/live availability gate.

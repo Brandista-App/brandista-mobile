@@ -3,16 +3,17 @@ import * as SecureStore from 'expo-secure-store'
 import ShowcaseScreen from '../src/showcase/Screen'
 import { ShowcaseProvider } from '../src/showcase/state'
 import { cartTotal, products, restoreCart, updateCart } from '../src/showcase/catalogue'
-import * as runtime from '../src/lib/runtime'
+const mockConnection: { base: string; error: Error | null } = { base: '', error: null }
 let mockParams: Record<string, string> = {}
 jest.mock('expo-router', () => ({
   useLocalSearchParams: () => mockParams,
   useFocusEffect: () => {},
   router: { push: jest.fn(), replace: jest.fn(), setParams: jest.fn(), canGoBack: () => false },
 }))
-jest.mock('../src/lib/runtime', () => ({ base: '', configurationError: new Error('unconfigured') }))
+jest.mock('../src/lib/runtime', () => ({ get base() { return mockConnection.base }, get configurationError() { return mockConnection.error } }))
 beforeEach(() => {
-  jest.restoreAllMocks()
+  mockConnection.base = ''
+  mockConnection.error = new Error('unconfigured')
   mockParams = {}
   jest.mocked(SecureStore.getItemAsync).mockResolvedValue(null)
   jest.mocked(SecureStore.setItemAsync).mockResolvedValue()
@@ -20,8 +21,8 @@ beforeEach(() => {
 })
 test('unreachable configured service keeps showcase available without simulated live success', async () => {
   mockParams = { view: 'live' }
-  jest.replaceProperty(runtime, 'base', 'https://test.example/api/v1')
-  jest.replaceProperty(runtime, 'configurationError', null)
+  mockConnection.base = 'https://test.example/api/v1'
+  mockConnection.error = null
   jest.mocked(global.fetch).mockRejectedValue(new Error('offline'))
   await render(<ShowcaseProvider><ShowcaseScreen /></ShowcaseProvider>)
   await fireEvent.press(screen.getByRole('button', { name: 'Connect to live shopping' }))

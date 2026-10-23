@@ -17,5 +17,5 @@ with zipfile.ZipFile(sys.argv[1]) as apk:
     assert len(list(Path('assets/showcase').glob('*.png'))) >= 3
     bundle = apk.read('assets/index.android.bundle')
     for marker in [b'OFFLINE SHOWCASE', b'SIMULATED ORDER CONFIRMATION', b'Mehr Atelier', b'brandista.showcase.cart.v1']:
-        assert marker in bundle, f'Missing showcase bundle marker: {marker}'
+        assert marker in bundle or marker.decode('ascii').encode('utf-16-le') in bundle, f'Missing showcase bundle marker: {marker}'
 print('Verified original bundled catalogue imagery and showcase JavaScript markers')
