@@ -20,14 +20,17 @@ function Chip({
   label,
   active,
   onPress,
+  accessibilityLabel,
 }: {
   label: string
   active?: boolean
   onPress: () => void
+  accessibilityLabel?: string
 }) {
   return (
     <Pressable
       accessibilityRole="button"
+      accessibilityLabel={accessibilityLabel}
       accessibilityState={{ selected: !!active }}
       onPress={onPress}
       style={[s.chip, active && { backgroundColor: theme.ink }]}
@@ -143,7 +146,10 @@ export default function ShowcaseScreen() {
           <Text style={s.modeLink}>Shop live →</Text>
         </Pressable>
       </View>
-      <Screen title={title}>
+      <Screen
+        title={title}
+        scrollKey={`${view}:${params.id || params.brand || params.category || ''}`}
+      >
         {view !== 'home' && (
           <Pressable
             accessibilityRole="button"
@@ -327,12 +333,14 @@ export default function ShowcaseScreen() {
                   <Text style={s.price}>{pkr(p.price * l.quantity)}</Text>
                   <View style={styles.row}>
                     <Chip
-                      label={`Decrease ${p.name}`}
+                      label="−"
+                      accessibilityLabel={`Decrease ${p.name}`}
                       onPress={() => change(l.id, l.size, l.quantity - 1)}
                     />
                     <Text style={styles.text}>{l.quantity}</Text>
                     <Chip
-                      label={`Increase ${p.name}`}
+                      label="+"
+                      accessibilityLabel={`Increase ${p.name}`}
                       onPress={() => change(l.id, l.size, l.quantity + 1)}
                     />
                     <Chip label="Remove" onPress={() => change(l.id, l.size, 0)} />
@@ -527,6 +535,8 @@ const s = StyleSheet.create({
     borderColor: theme.line,
     backgroundColor: theme.white,
     minHeight: 44,
+    minWidth: 44,
+    alignItems: 'center',
     justifyContent: 'center',
   },
   brand: { borderRadius: 16, padding: 20, flexDirection: 'row', alignItems: 'center', gap: 16 },

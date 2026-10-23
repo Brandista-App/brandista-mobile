@@ -87,11 +87,13 @@ export function Screen({
   children,
   refreshing,
   onRefresh,
+  scrollKey,
 }: {
   title: string
   children: ReactNode
   refreshing?: boolean
   onRefresh?: () => void
+  scrollKey?: string
 }) {
   return (
     <SafeAreaView edges={['left', 'right', 'bottom']} style={styles.screen}>
@@ -100,6 +102,7 @@ export function Screen({
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
         <ScrollView
+          key={scrollKey}
           keyboardShouldPersistTaps="handled"
           contentContainerStyle={styles.content}
           refreshControl={
