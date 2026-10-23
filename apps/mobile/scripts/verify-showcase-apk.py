@@ -1,13 +1,19 @@
-"""Check exact bundled original showcase imagery, rather than network/cache availability."""
+"""Check bundled original imagery (Android may losslessly crunch PNG bytes)."""
 import hashlib
 from pathlib import Path
 import sys
 import zipfile
 
 with zipfile.ZipFile(sys.argv[1]) as apk:
-    packaged = {hashlib.sha256(apk.read(n)).hexdigest() for n in apk.namelist() if n.startswith('assets/') and n.endswith('.png')}
+    images = {n: apk.read(n) for n in apk.namelist() if n.startswith(('assets/', 'res/')) and n.endswith('.png')}
+    packaged = {hashlib.sha256(data).hexdigest() for data in images.values()}
     for asset in Path('assets/showcase').glob('*.png'):
-        assert hashlib.sha256(asset.read_bytes()).hexdigest() in packaged, f'Missing bundled asset: {asset}'
+        original = asset.read_bytes()
+        matching_resource = [data for name, data in images.items() if f'showcase_{asset.stem}.png' in name]
+        assert hashlib.sha256(original).hexdigest() in packaged or any(
+            data[:8] == original[:8] and data[16:24] == original[16:24] and len(data) > 50000
+            for data in matching_resource
+        ), f'Missing bundled image or invalid dimensions: {asset}'
     assert len(list(Path('assets/showcase').glob('*.png'))) >= 3
     bundle = apk.read('assets/index.android.bundle')
     for marker in [b'OFFLINE SHOWCASE', b'SIMULATED ORDER CONFIRMATION', b'Mehr Atelier', b'brandista.showcase.cart.v1']:

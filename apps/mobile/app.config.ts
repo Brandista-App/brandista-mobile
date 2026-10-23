@@ -100,7 +100,14 @@ const config: ExpoConfig = {
     './plugins-internal-signing.cjs',
     './plugins-lan-network.cjs',
     ['expo-secure-store', { configureAndroidBackup: true }],
-    ['expo-splash-screen', { backgroundColor: '#FAF6EF', image: '../brand-assets/brandista-approved-logo.jpeg.jpeg', imageWidth: 180 }],
+    [
+      'expo-splash-screen',
+      {
+        backgroundColor: '#FAF6EF',
+        image: '../brand-assets/brandista-approved-logo.jpeg.jpeg',
+        imageWidth: 180,
+      },
+    ],
     [
       'expo-build-properties',
       {

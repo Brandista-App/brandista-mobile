@@ -3,6 +3,7 @@ import * as SecureStore from 'expo-secure-store'
 import ShowcaseScreen from '../src/showcase/Screen'
 import { ShowcaseProvider } from '../src/showcase/state'
 import { cartTotal, products, restoreCart, updateCart } from '../src/showcase/catalogue'
+import * as runtime from '../src/lib/runtime'
 let mockParams: Record<string, string> = {}
 jest.mock('expo-router', () => ({
   useLocalSearchParams: () => mockParams,
@@ -11,10 +12,23 @@ jest.mock('expo-router', () => ({
 }))
 jest.mock('../src/lib/runtime', () => ({ base: '', configurationError: new Error('unconfigured') }))
 beforeEach(() => {
+  jest.restoreAllMocks()
   mockParams = {}
   jest.mocked(SecureStore.getItemAsync).mockResolvedValue(null)
   jest.mocked(SecureStore.setItemAsync).mockResolvedValue()
   global.fetch = jest.fn()
+})
+test('unreachable configured service keeps showcase available without simulated live success', async () => {
+  mockParams = { view: 'live' }
+  jest.replaceProperty(runtime, 'base', 'https://test.example/api/v1')
+  jest.replaceProperty(runtime, 'configurationError', null)
+  jest.mocked(global.fetch).mockRejectedValue(new Error('offline'))
+  await render(<ShowcaseProvider><ShowcaseScreen /></ShowcaseProvider>)
+  await fireEvent.press(screen.getByRole('button', { name: 'Connect to live shopping' }))
+  await waitFor(() => expect(screen.getByText(/shopping service is unavailable/)).toBeTruthy())
+  expect(screen.getByRole('button', { name: 'Continue offline showcase' })).toBeTruthy()
+  expect(screen.queryByText('SIMULATED ORDER CONFIRMATION')).toBeNull()
+  expect(global.fetch).toHaveBeenCalledTimes(1)
 })
 test('bundled catalogue has fictional brands, PKR values and selectable options', () => {
   expect(new Set(products.map((p) => p.brand)).size).toBe(3)
