@@ -1,5 +1,7 @@
 # Installing the Brandista showcase
 
+Download: [FINAL-001 universal APK build and artifacts](https://github.com/Brandista-App/brandista-mobile/actions/runs/40025213783). Open the **Brandista-Showcase-Universal** artifact after the workflow completes successfully; it contains the APK, checksum and package/signing evidence. GitHub repository access may be required.
+
 This is an internally signed brand-presentation candidate. Use only the FINAL-001 artifact linked in RELEASE-READINESS.md and verify its SHA256 against apk-sha256.txt. Download the GitHub Actions artifact ZIP while signed into an authorized GitHub account, extract it, then transfer/download **Brandista-Showcase-Universal.apk** onto the phone. The Actions artifact may expire; preserve the verified file and checksum.
 
 1. On the Android phone, open the downloaded APK in Files/Downloads.

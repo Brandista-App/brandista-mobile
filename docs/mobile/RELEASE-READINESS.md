@@ -53,6 +53,14 @@ Current backend tests verify customer auth, catalogue, cart, addresses/COD/histo
 
 Local raw evidence is retained at `D:\Brandista Workplace\FINAL-001-evidence`; secrets and generated dependency/build directories are not committed. No backend/admin/customer web source changes were needed for this presentation candidate. Their working checkouts remain clean.
 
+Browser layout QA exercised the actual showcase React components with temporary React Native Web, router, image and storage adapters outside the repository. Search → option selection → bag → two-step simulated checkout → explicit no-purchase confirmation, fictional brand storefront filtering and unavailable-service messaging were observed. It caught and corrected retained scroll offsets and oversized quantity controls. Screenshots are retained in the evidence directory. This does **not** test the native Router, SecureStore, Android lifecycle or physical device.
+
+## Artifact provenance
+
+Final runtime source: `ab3c266` on `codex/final-001-showcase`. [Signed universal build, verification and downloadable artifact](https://github.com/Brandista-App/brandista-mobile/actions/runs/40025213783). The artifact is uploaded only after release compilation, native ELF ABI inspection, embedded bundle, certificate, non-debuggable manifest, network security and bundled image checks pass. It includes `apk-sha256.txt`, `apk-metadata.txt`, `signing-report.txt`, `native-libraries.json` and `build-evidence.txt`. Check the actual run conclusion and checksum when downloading; this document alone does not establish a successful build or device launch. Later documentation-only commits do not change that APK source.
+
+GitHub repository variables and deployment-environment listings for mobile and backend were empty during FINAL-001 inspection; no approved public backend was established. Do not interpret the internally configured reserved `.invalid` sentinel as a service deployment. Existing deployment templates remain preparation only.
+
 ## Security and deployment gates
 
 Existing internal signing only; no production key, privileged account creation, public tunnel, paid deployment or Play publishing. Android permissions remain restricted; production HTTPS policy is preserved. No secrets are embedded. Backend deployment remains explicitly unavailable in the presentation build; the reserved `.invalid` sentinel is inherited build configuration and never contacted by the showcase/live availability gate.

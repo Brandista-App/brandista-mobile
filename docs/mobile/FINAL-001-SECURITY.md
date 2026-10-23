@@ -2,7 +2,7 @@
 
 2026-10-24. No dependency versions, overrides or framework major versions changed in FINAL-001.
 
-Current full npm audit: **5 high affected package entries, zero critical**. Production-only audit is recorded with the current run evidence. These are inherited package entries, not five distinct vulnerabilities. Earlier PR19 counts describe a different advisory database snapshot and are not current clearance.
+Current full and production-only npm audits each report **5 high affected package entries, zero critical**. These are inherited package entries, not five distinct vulnerabilities. Earlier PR19 counts describe a different advisory database snapshot and are not current clearance. Admin and customer web clean-install audits each reported zero vulnerabilities; this is not a security certification.
 
 - **node-forge 1.4.0**, via Expo CLI / code-signing-certificates: [GHSA-86w9-cpqp-85rv](https://github.com/advisories/GHSA-86w9-cpqp-85rv), no published patched version in the reviewed advisory. Used by Expo development/build certificate tooling. Limit builds to trusted source/config/certificate inputs.
 - **zod 3.25.76**, via Expo CLI: [GHSA-mrhx-c7xc-m3w5](https://github.com/advisories/GHSA-mrhx-c7xc-m3w5), patched at 4.6.6. Installed CLI declares **^3.25.76**, so forcing Zod 4 crosses its supported major constraint. Keep tooling inputs trusted and await a compatible upstream CLI update. A forced override or npm's suggested Expo 44 downgrade would invalidate the verified SDK58 architecture.
