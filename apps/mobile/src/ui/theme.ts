@@ -1,9 +1,9 @@
 export const theme = {
-  paper: '#F7F3EB',
+  paper: '#FAF6EF',
   ink: '#173D32',
   muted: '#5A665E',
   clay: '#A74730',
-  line: '#D4D9CD',
+  line: '#DFD8CA',
   white: '#FFFFFF',
   danger: '#A02F27',
 }

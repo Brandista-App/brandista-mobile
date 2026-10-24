@@ -58,9 +58,16 @@ if (internalLan) {
     throw new Error('Internal LAN requires a private IPv4 /api/v1 endpoint.')
 }
 const config: ExpoConfig = {
-  name: internalLan ? 'Brandista LAN' : internal ? 'Brandista Internal' : development ? 'Brandista Dev' : 'Brandista',
+  name: internalLan
+    ? 'Brandista LAN'
+    : internal
+      ? 'Brandista Internal'
+      : development
+        ? 'Brandista Dev'
+        : 'Brandista',
   slug: 'brandista-mobile',
-  version: '0.1.0',
+  version: '0.2.0',
+  icon: '../brand-assets/brandista-approved-logo.jpeg.jpeg',
   scheme: 'brandista',
   orientation: 'default',
   userInterfaceStyle: 'light',
@@ -73,7 +80,7 @@ const config: ExpoConfig = {
       : development
         ? 'com.brandista.mobile.dev'
         : 'com.brandista.mobile',
-    versionCode: 1,
+    versionCode: 2,
     permissions: [],
     blockedPermissions: [
       'android.permission.RECORD_AUDIO',
@@ -93,7 +100,14 @@ const config: ExpoConfig = {
     './plugins-internal-signing.cjs',
     './plugins-lan-network.cjs',
     ['expo-secure-store', { configureAndroidBackup: true }],
-    ['expo-splash-screen', { backgroundColor: '#F7F3EB' }],
+    [
+      'expo-splash-screen',
+      {
+        backgroundColor: '#FAF6EF',
+        image: '../brand-assets/brandista-approved-logo.jpeg.jpeg',
+        imageWidth: 180,
+      },
+    ],
     [
       'expo-build-properties',
       {

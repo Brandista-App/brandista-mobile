@@ -20,7 +20,7 @@ on:
         description: Backend connection mode
         type: choice
         options: [https, internal-lan, placeholder]
-        default: https
+        default: placeholder
 permissions:
   contents: read
   actions: read
@@ -204,16 +204,18 @@ jobs:
             grep -q "package: name='com.brandista.mobile.internal'" apk-metadata.txt
             python3 scripts/verify-apk-network.py "$apk"
           fi
-          sha256sum "$apk" > apk-sha256.txt
+          cp "$apk" Brandista-Showcase-Universal.apk
+          sha256sum Brandista-Showcase-Universal.apk > apk-sha256.txt
+          python3 scripts/verify-showcase-apk.py "$apk"
           APK_SOURCE_SHA="$GITHUB_SHA"
           if [ -f apk-source-sha.txt ]; then APK_SOURCE_SHA=$(cat apk-source-sha.txt); fi
           printf 'APK source: %s\nVerification source: %s\nAPI: %s\nLAN reachability: requires local setup and phone verification\nDevice launch: not verified by this workflow\n' "$APK_SOURCE_SHA" "$GITHUB_SHA" "$EXPO_PUBLIC_API_BASE_URL" > build-evidence.txt
       - uses: actions/upload-artifact@v7
         with:
-          name: brandista-android-internal-signed-universal
+          name: Brandista-Showcase-Universal
           retention-days: 14
           path: |
-            apps/mobile/android/app/build/outputs/apk/release/app-release.apk
+            apps/mobile/Brandista-Showcase-Universal.apk
             apps/mobile/signing-report.txt
             apps/mobile/apk-metadata.txt
             apps/mobile/apk-sha256.txt
