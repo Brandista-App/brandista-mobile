@@ -5,6 +5,11 @@ import { ShowcaseProvider } from '../src/showcase/state'
 import { cartTotal, products, restoreCart, updateCart } from '../src/showcase/catalogue'
 const mockConnection: { base: string; error: Error | null } = { base: '', error: null }
 let mockParams: Record<string, string> = {}
+const savedOfflineMode = process.env.EXPO_PUBLIC_OFFLINE_SHOWCASE
+afterEach(() => {
+  if (savedOfflineMode === undefined) delete process.env.EXPO_PUBLIC_OFFLINE_SHOWCASE
+  else process.env.EXPO_PUBLIC_OFFLINE_SHOWCASE = savedOfflineMode
+})
 jest.mock('expo-router', () => ({
   useLocalSearchParams: () => mockParams,
   useFocusEffect: () => {},
@@ -12,12 +17,24 @@ jest.mock('expo-router', () => ({
 }))
 jest.mock('../src/lib/runtime', () => ({ get base() { return mockConnection.base }, get configurationError() { return mockConnection.error } }))
 beforeEach(() => {
+  delete process.env.EXPO_PUBLIC_OFFLINE_SHOWCASE
   mockConnection.base = ''
   mockConnection.error = new Error('unconfigured')
   mockParams = {}
   jest.mocked(SecureStore.getItemAsync).mockResolvedValue(null)
   jest.mocked(SecureStore.setItemAsync).mockResolvedValue()
   global.fetch = jest.fn()
+})
+
+test('offline-only standalone build refuses live transport even with a configured service', async () => {
+  process.env.EXPO_PUBLIC_OFFLINE_SHOWCASE = '1'
+  mockParams = { view: 'live' }
+  mockConnection.base = 'https://test.example/api/v1'
+  mockConnection.error = null
+  await render(<ShowcaseProvider><ShowcaseScreen /></ShowcaseProvider>)
+  await fireEvent.press(screen.getByRole('button', { name: 'Connect to live shopping' }))
+  expect(screen.getByText(/awaiting an approved backend deployment/)).toBeTruthy()
+  expect(global.fetch).not.toHaveBeenCalled()
 })
 test('unreachable configured service keeps showcase available without simulated live success', async () => {
   mockParams = { view: 'live' }

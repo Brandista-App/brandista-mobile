@@ -6,8 +6,16 @@ on:
       - 'apps/brand-assets/**'
       - 'docs/mobile/IOS-001*'
       - 'docs/mobile/IOS-002*'
+      - 'docs/mobile/IOS-FINAL*'
+      - 'docs/mobile/IOS-PERSONAL*'
+      - 'docs/mobile/IOS-DEVICE*'
       - '.github/workflows/ios-quality.yml'
   workflow_dispatch:
+    inputs:
+      ios_simulator:
+        description: Build and smoke-launch one unsigned iOS Simulator release (no Apple account)
+        type: boolean
+        default: false
 permissions:
   contents: read
 jobs:
@@ -38,4 +46,40 @@ jobs:
       - run: npm test
       - run: npm run config:check
       - run: npm run bundle:ios
-      # No EAS account, signing credentials, native build, or deployment in this workflow.
+      # Static quality needs no Apple account, credentials or deployment.
+  simulator:
+    if: github.event_name == 'workflow_dispatch' && inputs.ios_simulator
+    needs: quality
+    runs-on: macos-26
+    timeout-minutes: 45
+    defaults:
+      run:
+        working-directory: apps/mobile
+    env:
+      CI: '1'
+      EXPO_NO_TELEMETRY: '1'
+      APP_VARIANT: production
+      EXPO_PUBLIC_APP_ENV: development
+      IOS_BUILD: '1'
+      IOS_OFFLINE_SHOWCASE: '1'
+      EXPO_PUBLIC_OFFLINE_SHOWCASE: '1'
+      # Reserved synthetic identity for Simulator only; never registered with Apple.
+      IOS_BUNDLE_IDENTIFIER: invalid.example.brandista.simulator
+      RCT_NO_LAUNCH_PACKAGER: '1'
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: apps/mobile/package-lock.json
+      - run: npm ci
+      - name: Build and smoke-launch offline Simulator application
+        run: bash scripts/build-ios-simulator.sh
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: Brandista-iOS-Simulator
+          retention-days: 14
+          path: apps/mobile/.expo/ios-final-artifact/
+          if-no-files-found: error

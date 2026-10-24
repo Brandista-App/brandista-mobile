@@ -103,7 +103,12 @@ export default function ShowcaseScreen() {
     setLiveError('')
     setChecking(true)
     try {
-      if (configurationError || !base || base.includes('.invalid'))
+      if (
+        process.env.EXPO_PUBLIC_OFFLINE_SHOWCASE === '1' ||
+        configurationError ||
+        !base ||
+        base.includes('.invalid')
+      )
         throw new Error(
           'Live shopping is awaiting an approved backend deployment. You can explore the entire showcase offline.',
         )
@@ -521,9 +526,15 @@ const s = StyleSheet.create({
     gap: 17,
     justifyContent: 'center',
   },
-  display: { fontFamily: 'serif', fontSize: 35, lineHeight: 40, color: theme.ink },
+  display: { fontFamily: theme.headingFont, fontSize: 35, lineHeight: 40, color: theme.ink },
   eyebrow: { fontSize: 10, letterSpacing: 1.2, color: theme.muted, marginTop: 6, lineHeight: 16 },
-  section: { fontFamily: 'serif', fontSize: 26, lineHeight: 33, color: theme.ink, marginTop: 8 },
+  section: {
+    fontFamily: theme.headingFont,
+    fontSize: 26,
+    lineHeight: 33,
+    color: theme.ink,
+    marginTop: 8,
+  },
   grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 14 },
   product: { width: '47%', gap: 5, marginBottom: 16 },
   productName: { fontSize: 16, color: theme.ink, fontWeight: '600', lineHeight: 22 },
@@ -540,7 +551,7 @@ const s = StyleSheet.create({
     justifyContent: 'center',
   },
   brand: { borderRadius: 16, padding: 20, flexDirection: 'row', alignItems: 'center', gap: 16 },
-  brandMonogram: { fontFamily: 'serif', fontSize: 42, color: theme.ink },
+  brandMonogram: { fontFamily: theme.headingFont, fontSize: 42, color: theme.ink },
   promo: { backgroundColor: '#EDDFD8', padding: 24, gap: 15, borderRadius: 18 },
   nav: {
     flexDirection: 'row',
