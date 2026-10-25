@@ -20,8 +20,8 @@ import { theme } from './theme'
 export const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: theme.paper },
   content: { padding: 20, gap: 16, width: '100%', maxWidth: 720, alignSelf: 'center' },
-  title: { fontSize: 30, fontFamily: 'serif', color: theme.ink, lineHeight: 39 },
-  heading: { fontSize: 23, fontFamily: 'serif', color: theme.ink, lineHeight: 31 },
+  title: { fontSize: 30, fontFamily: theme.headingFont, color: theme.ink, lineHeight: 39 },
+  heading: { fontSize: 23, fontFamily: theme.headingFont, color: theme.ink, lineHeight: 31 },
   text: { fontSize: 16, lineHeight: 24, color: theme.ink },
   muted: { fontSize: 14, lineHeight: 21, color: theme.muted },
   card: {

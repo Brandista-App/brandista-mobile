@@ -7,6 +7,17 @@ const development = process.env.APP_VARIANT === 'development'
 const base = process.env.EXPO_PUBLIC_API_BASE_URL
 const iosBundleIdentifier = process.env.IOS_BUNDLE_IDENTIFIER
 const easProjectId = process.env.EAS_PROJECT_ID
+const offlineIos = process.env.IOS_OFFLINE_SHOWCASE === '1'
+if (
+  offlineIos &&
+  (process.env.IOS_BUILD !== '1' ||
+    process.env.EXPO_PUBLIC_OFFLINE_SHOWCASE !== '1' ||
+    base ||
+    internalLan)
+)
+  throw new Error(
+    'Offline iOS builds require IOS_BUILD=1, EXPO_PUBLIC_OFFLINE_SHOWCASE=1 and no API or Android LAN configuration.',
+  )
 if (iosBundleIdentifier && !/^[A-Za-z0-9-]+(?:\.[A-Za-z0-9-]+)+$/.test(iosBundleIdentifier))
   throw new Error('IOS_BUNDLE_IDENTIFIER must be an owner-approved reverse-DNS identifier.')
 if (
@@ -14,13 +25,14 @@ if (
   !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(easProjectId)
 )
   throw new Error('EAS_PROJECT_ID must be the UUID of the owner-approved Expo project.')
-if (process.env.IOS_BUILD === '1' && (!iosBundleIdentifier || !easProjectId))
+if (process.env.IOS_BUILD === '1' && (!iosBundleIdentifier || (!offlineIos && !easProjectId)))
   throw new Error(
     'iOS builds require owner-approved IOS_BUNDLE_IDENTIFIER and EAS_PROJECT_ID. Expo Go needs neither.',
   )
 const endpoint = base ? new URL(base) : undefined
 if (
   process.env.IOS_BUILD === '1' &&
+  !offlineIos &&
   (!endpoint ||
     endpoint.protocol !== 'https:' ||
     endpoint.username ||
@@ -34,6 +46,7 @@ if (
   throw new Error('iOS builds require an approved reachable HTTPS API ending in /api/v1.')
 if (
   !development &&
+  !offlineIos &&
   (!endpoint ||
     (endpoint.protocol !== 'https:' && !(internalLan && endpoint.protocol === 'http:')) ||
     endpoint.username ||

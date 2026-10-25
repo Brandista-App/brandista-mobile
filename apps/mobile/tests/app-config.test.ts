@@ -16,6 +16,8 @@ function development() {
   delete process.env.IOS_BUILD
   delete process.env.IOS_BUNDLE_IDENTIFIER
   delete process.env.EAS_PROJECT_ID
+  delete process.env.IOS_OFFLINE_SHOWCASE
+  delete process.env.EXPO_PUBLIC_OFFLINE_SHOWCASE
   delete process.env.EXPO_PUBLIC_API_BASE_URL
 }
 
@@ -46,4 +48,21 @@ test('signed build configuration requires approved identity, project and HTTPS A
   }
   process.env.EXPO_PUBLIC_API_BASE_URL = 'https://api.example.invalid/api/v1'
   expect(config().ios?.bundleIdentifier).toBe('invalid.example.brandista.test')
+})
+
+test('explicit offline personal iOS build needs an identity but no EAS project or backend', () => {
+  development()
+  process.env.APP_VARIANT = 'production'
+  process.env.IOS_BUILD = '1'
+  process.env.IOS_OFFLINE_SHOWCASE = '1'
+  process.env.EXPO_PUBLIC_OFFLINE_SHOWCASE = '1'
+  expect(config).toThrow('owner-approved')
+  process.env.IOS_BUNDLE_IDENTIFIER = 'invalid.example.brandista.simulator'
+  expect(config().ios?.bundleIdentifier).toBe('invalid.example.brandista.simulator')
+  expect(config().extra?.eas).toBeUndefined()
+  process.env.EXPO_PUBLIC_API_BASE_URL = 'https://api.example.invalid/api/v1'
+  expect(config).toThrow('no API')
+  delete process.env.EXPO_PUBLIC_API_BASE_URL
+  delete process.env.EXPO_PUBLIC_OFFLINE_SHOWCASE
+  expect(config).toThrow('EXPO_PUBLIC_OFFLINE_SHOWCASE')
 })

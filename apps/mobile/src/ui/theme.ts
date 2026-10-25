@@ -1,4 +1,6 @@
+import { Platform } from 'react-native'
 export const theme = {
+  headingFont: Platform.OS === 'ios' ? 'ui-serif' : 'serif',
   paper: '#FAF6EF',
   ink: '#173D32',
   muted: '#5A665E',
