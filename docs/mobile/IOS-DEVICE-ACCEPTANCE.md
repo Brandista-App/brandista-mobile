@@ -30,12 +30,12 @@ These rows describe implementation and focused existing coverage, not exhaustive
 
 The manual job is a genuine Xcode Release Simulator build attempt, not an Expo export renamed as a native artifact. Final build/launch/screenshot results are recorded below only after completion. A Simulator ZIP cannot install on a physical iPhone. Boot/launch screenshots alone do not prove cart, checkout, search, network loss or gesture behavior.
 
-| Scenario | Status before final native verification | Required evidence |
+| Scenario | Verified status | Required evidence |
 | --- | --- | --- |
-| CNG/Pods/native compile | NOT TESTED | Successful current Xcode build log and actual Simulator-platform Mach-O. |
-| Embedded standalone code/assets | NOT TESTED | Hermes bundle, original-logo match and packaged imagery checks. |
-| Initial install/launch without Metro | NOT TESTED | Actual simctl install/launch and visually reviewed screenshot. |
-| Terminate/relaunch | NOT TESTED | Actual relaunch and rendered screenshot; does not certify cart changes persisted. |
+| CNG/Pods/native compile | PASS | Corrected manual run40184802838: CNG/Pods and Xcode Release compile; actual IOSSIMULATOR Mach-O verified. |
+| Embedded standalone code/assets | PASS | Corrected run verifies embedded Hermes, fictional catalogue markers, approved-logo hash, imagery and ATS; no device provisioning. |
+| Initial install/launch without Metro | PASS | Run40184802838 installs and launches the Release app on iPhone17 Pro / iOS26.4 Simulator; first-launch screenshot visually reviewed. |
+| Terminate/relaunch | PASS | Actual terminate/relaunch and second screenshot visually reviewed. No cart changes were made, so this does not certify changed-cart persistence. |
 | Splash/native stack/tab gestures | NOT TESTED | Native interactive run; launch screenshots cannot establish animated splash or gestures. |
 | Several iPhone sizes/notch/Dynamic Island | NOT TESTED | Record actual runtime/device size, landscape, accessibility text size and cutout screenshots. |
 | Keyboard/VoiceOver/modal/scroll interaction | NOT TESTED | Interactive native acceptance; component props alone are insufficient. |
@@ -76,3 +76,9 @@ Use only synthetic, disposable data in a separately approved environment. Verify
 ## Evidence to record during owner acceptance
 
 Record reviewed source SHA, artifact hash, Xcode version, Simulator/device model and OS, free Personal Team profile expiry (no keys/IDs/passwords), backend environment label/readiness, test IDs using synthetic data and each PASS/FAIL/BLOCKED/NOT TESTED. Capture screenshots and sanitized observations; do not publish tokens, addresses, Apple credentials, provisioning profiles or real customer data. A FAIL should include reproducible steps, expected/actual behavior and the smallest safe fix.
+
+## Final Simulator evidence — 2026-10-25
+
+[Native run40184802838](https://github.com/Brandista-App/brandista-mobile/actions/runs/40184802838) passes quality and the bounded native build/launch job. Runtime source is d17f939473683b782005ba7754315e74dfe218da. Xcode26.6 (17F113), iPhone17 Pro Simulator / iOS26.4; compiled minimum iOS16.4. First-launch and relaunch PNGs (1206×2622) were visually reviewed: approved logo, bundled editorial image, iOS serif headings, explicit demo banner, tabs and status/cutout clearance render without visible overlap on this initial screen. No gesture, cart, search, keyboard, VoiceOver, other-size or disconnected-network interaction is inferred from these two screenshots.
+
+[Download native Simulator artifact](https://github.com/Brandista-App/brandista-mobile/actions/runs/40184802838/artifacts/12595594386). It includes app ZIP, SHA256, source/toolchain/platform/asset evidence, sanitized logs and both screenshots. The extracted inner app ZIP hash was independently matched locally: `9e1e9abaae5e4ac9e54c56aba45a5b5e9f26c2042c7e06eaeae82a5da6cd9025`. Physical-device and live-backend rows above remain unchanged.

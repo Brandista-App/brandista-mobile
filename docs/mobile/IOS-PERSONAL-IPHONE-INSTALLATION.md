@@ -33,6 +33,8 @@ cd ios && pod install && cd ..
 open ios/Brandista.xcworkspace
 ```
 
+Before opening Xcode, also save the six configuration values above (without `export`) in the ignored `apps/mobile/.env.local`, preserving any existing file after inspection. Remove conflicting API/LAN values from local dotenv files; inspect `.env.development.local` and `.env.production.local`, which take precedence over `.env.local`. Keep `EXPO_PUBLIC_API_BASE_URL`, `EXPO_PUBLIC_APP_VARIANT` and `EAS_PROJECT_ID` unset. Xcode opened through macOS need not inherit the terminal exports: Expo's Release bundling command must load the same offline configuration from disk. Do not commit local environment files. [Expo environment loading](https://docs.expo.dev/guides/environment-variables/).
+
 This explicit offline configuration rejects any API endpoint or Android LAN override. It requires a bundle identifier but no EAS project because Xcode owns this local signing flow. Normal live-build guards are unchanged. Essential imagery and catalogue data are bundled; typography uses iOS system fonts, so no remote font download is needed.
 
 4. In Xcode Settings → Accounts, the owner adds their free Apple Account. Select the **Brandista application target → Signing & Capabilities → Automatically manage signing**, then choose the owner's **Personal Team**. Use the same bundle identifier supplied above. Let Xcode create an Apple Development certificate and device-specific provisioning profile locally. Do not upload these materials to GitHub. If Xcode requests a paid-only capability, stop and review the capability instead of enrolling or purchasing automatically.
