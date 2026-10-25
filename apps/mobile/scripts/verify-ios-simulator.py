@@ -16,8 +16,11 @@ assert not ats.get('NSAllowsArbitraryLoads', False), ats
 bundle = app / 'main.jsbundle'
 assert bundle.is_file() and bundle.stat().st_size > 100_000, 'Missing standalone JS bundle'
 assert bundle.read_bytes()[:8].hex() == 'c61fbc03c103191f', 'Expected Hermes bytecode'
-for text in [b'OFFLINE SHOWCASE', b'SIMULATED ORDER CONFIRMATION']:
-    assert text in bundle.read_bytes(), f'Missing offline catalogue marker {text!r}'
+bytecode = bundle.read_bytes()
+# Hermes stores strings containing non-ASCII characters (such as the mode
+# label's middle dot) as UTF-16, including their ASCII prefix.
+for text in ['OFFLINE SHOWCASE', 'SIMULATED ORDER CONFIRMATION']:
+    assert any(text.encode(encoding) in bytecode for encoding in ['utf-8', 'utf-16le']), f'Missing offline catalogue marker {text!r}'
 binary = app / info['CFBundleExecutable']
 build = subprocess.check_output(['xcrun', 'vtool', '-show-build', str(binary)], text=True)
 assert 'IOSSIMULATOR' in build, build
