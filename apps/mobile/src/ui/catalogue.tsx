@@ -4,10 +4,16 @@ import { useQuery } from '@tanstack/react-query'
 import { api } from '../lib/runtime'
 import { Button, ErrorMessage, Field, Loading, Screen, styles } from './components'
 import { ProductCard } from './products'
-export function Catalogue({ brandId }: { brandId?: number }) {
+export function Catalogue({
+  brandId,
+  initialCategoryId,
+}: {
+  brandId?: number
+  initialCategoryId?: number
+}) {
   const [draft, setDraft] = useState(''),
     [keyword, setKeyword] = useState(''),
-    [categoryId, setCategory] = useState<number | undefined>(),
+    [categoryId, setCategory] = useState<number | undefined>(initialCategoryId),
     [sort, setSort] = useState('default'),
     [page, setPage] = useState(0),
     [categoryPage, setCategoryPage] = useState(0)

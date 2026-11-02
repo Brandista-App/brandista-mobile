@@ -1,3 +1,4 @@
+import type { HomepageContent } from './content'
 import type { Request } from './client'
 import type {
   Address,
@@ -26,6 +27,7 @@ export function createApi(request: Request) {
       ...(body === undefined ? {} : { body: JSON.stringify(body) }),
     })
   return {
+    homepage: () => request<HomepageContent | null>('/content/homepage?target=MOBILE'),
     products: (params: Record<string, string | number> = {}) =>
       request<Page<Product>>(
         `/products?${Object.entries(params)
