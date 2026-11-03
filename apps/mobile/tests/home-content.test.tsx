@@ -1,4 +1,4 @@
-import { render, screen, fireEvent, cleanup } from '@testing-library/react-native'
+import { render, screen, fireEvent, cleanup, waitFor } from '@testing-library/react-native'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { router } from 'expo-router'
 import Home from '../src/app/(tabs)/index'
@@ -15,8 +15,8 @@ beforeEach(() => {
   ;(api.brands as jest.Mock).mockResolvedValue([])
   ;(api.categories as jest.Mock).mockResolvedValue({ content: [], totalPages: 1 })
 })
-afterEach(() => {
-  cleanup()
+afterEach(async () => {
+  await cleanup()
   client.clear()
 })
 const mount = () =>
@@ -44,15 +44,16 @@ test('renders published banners and maps a collection link while respecting disa
     brandIds: [],
     collectionIds: [],
   })
-  mount()
+  await mount()
   await screen.findByText('Autumn edit')
   expect(screen.queryByText('Featured brands')).toBeNull()
-  fireEvent.press(screen.getByText('Explore'))
+  await fireEvent.press(screen.getByText('Explore'))
   expect(router.push).toHaveBeenCalledWith('/catalogue?categoryId=8')
 })
 test('retains a usable catalogue homepage when the new content API fails', async () => {
   ;(api.homepage as jest.Mock).mockRejectedValue(new Error('unavailable'))
-  mount()
+  await mount()
+  await waitFor(() => expect(client.getQueryState(['homepage-content'])?.status).toBe('error'))
   await screen.findByText('Discover something that feels like you.')
   expect(screen.getByText('Explore the catalogue')).toBeTruthy()
 })
